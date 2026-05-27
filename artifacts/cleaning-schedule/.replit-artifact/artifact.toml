@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/cleaning-schedule"
+title = "Home Cleaning Schedule"
+version = "1.0.0"
+id = "artifacts/cleaning-schedule"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/cleaning-schedule" ]
+localPort = 8082
+
+[services.development]
+run = "pnpm --filter @workspace/cleaning-schedule run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cleaning-schedule", "run", "build" ]
+publicDir = "artifacts/cleaning-schedule/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "8082"
+BASE_PATH = "/cleaning-schedule"

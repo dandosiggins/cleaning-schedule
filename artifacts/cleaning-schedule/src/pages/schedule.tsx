@@ -1,0 +1,103 @@
+import { useListTasks, useListUpcomingTasks } from "@workspace/api-client-react";
+import { TaskCard } from "@/components/task-card";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Plus, LayoutGrid, Clock } from "lucide-react";
+import { useMemo, useState } from "react";
+import { TaskFormDialog } from "@/components/task-form-dialog";
+
+export default function SchedulePage() {
+  const { data: tasks, isLoading } = useListTasks();
+  const { data: upcomingTasks, isLoading: isUpcomingLoading } = useListUpcomingTasks();
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const groupedTasks = useMemo(() => {
+    if (!tasks) return {};
+    return tasks.reduce((acc, task) => {
+      if (!acc[task.room]) {
+        acc[task.room] = [];
+      }
+      acc[task.room].push(task);
+      return acc;
+    }, {} as Record<string, typeof tasks>);
+  }, [tasks]);
+
+  return (
+    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-bold tracking-tight text-foreground">Full Schedule</h1>
+          <p className="text-muted-foreground mt-2 text-xl font-medium">Manage all your household routines.</p>
+        </div>
+        <Button onClick={() => setIsCreateOpen(true)} className="gap-2 rounded-xl h-12 px-6 font-semibold shadow-md hover-elevate-2 no-default-hover-elevate">
+          <Plus className="w-5 h-5" strokeWidth={2.5} />
+          <span>Add Task</span>
+        </Button>
+      </header>
+
+      {/* Upcoming Section */}
+      <div className="space-y-5">
+        <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
+          <Clock className="w-6 h-6 text-primary" />
+          Upcoming (Next 7 Days)
+        </h2>
+        {isUpcomingLoading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
+          </div>
+        ) : upcomingTasks?.length === 0 ? (
+          <div className="bg-card/30 border border-border/40 rounded-2xl p-6 text-center text-muted-foreground">
+            No tasks due in the next 7 days.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+            {upcomingTasks?.map((task) => (
+              <TaskCard key={`upcoming-${task.id}`} task={task} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <hr className="border-border/60" />
+
+      <div className="space-y-8 mt-8">
+        <h2 className="text-2xl font-bold text-foreground">All Tasks</h2>
+        {isLoading ? (
+          <div className="space-y-6">
+            <Skeleton className="h-8 w-40 rounded-lg" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
+            <Skeleton className="h-32 w-full rounded-2xl" />
+          </div>
+        ) : tasks?.length === 0 ? (
+          <div className="text-center py-24 px-4 border-2 border-dashed border-border rounded-3xl bg-card/40 shadow-sm mt-12">
+            <div className="w-20 h-20 bg-secondary rounded-3xl flex items-center justify-center mx-auto mb-6">
+              <LayoutGrid className="w-10 h-10 text-secondary-foreground" />
+            </div>
+            <h3 className="text-2xl font-bold text-foreground mb-3">No tasks defined</h3>
+            <p className="text-lg text-muted-foreground mb-8 max-w-md mx-auto">Start building your cleaning routine by adding your first task.</p>
+            <Button onClick={() => setIsCreateOpen(true)} className="rounded-xl h-12 px-8 font-semibold text-lg">Add your first task</Button>
+          </div>
+        ) : (
+          Object.entries(groupedTasks).map(([room, roomTasks]) => (
+            <div key={room} className="space-y-5 bg-card/50 p-5 md:p-8 rounded-3xl border border-border/60 shadow-sm">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold text-foreground">{room}</h2>
+                <span className="text-xs font-semibold text-muted-foreground bg-background border px-3 py-1 rounded-lg shadow-sm">
+                  {roomTasks.length} {roomTasks.length === 1 ? 'task' : 'tasks'}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
+                {roomTasks.map(task => (
+                  <TaskCard key={task.id} task={task} />
+                ))}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+
+      <TaskFormDialog open={isCreateOpen} onOpenChange={setIsCreateOpen} />
+    </div>
+  );
+}

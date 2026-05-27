@@ -1,0 +1,1 @@
+- [Artifact port registration fix](artifact-port-fix.md) — Artifact workflows fail with DIDNT_OPEN_A_PORT if the port is not in .replit [[ports]]; use verifyAndReplaceDotReplit to register it.
