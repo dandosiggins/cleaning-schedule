@@ -135,7 +135,7 @@ router.get("/tasks/:id", async (req, res) => {
   if (!parsed.success) return res.status(400).json({ error: "Invalid id" });
   const [task] = await db.select().from(cleaningTasksTable).where(eq(cleaningTasksTable.id, parsed.data.id));
   if (!task) return res.status(404).json({ error: "Task not found" });
-  res.json(toApiTask(task));
+  return res.json(toApiTask(task));
 });
 
 // PUT /tasks/:id
@@ -163,7 +163,7 @@ router.put("/tasks/:id", async (req, res) => {
     .set(updates)
     .where(eq(cleaningTasksTable.id, paramsParsed.data.id))
     .returning();
-  res.json(toApiTask(task));
+  return res.json(toApiTask(task));
 });
 
 // DELETE /tasks/:id
@@ -173,7 +173,7 @@ router.delete("/tasks/:id", async (req, res) => {
   const existing = await db.select({ id: cleaningTasksTable.id }).from(cleaningTasksTable).where(eq(cleaningTasksTable.id, parsed.data.id));
   if (!existing[0]) return res.status(404).json({ error: "Task not found" });
   await db.delete(cleaningTasksTable).where(eq(cleaningTasksTable.id, parsed.data.id));
-  res.status(204).end();
+  return res.status(204).end();
 });
 
 // POST /tasks/:id/complete
@@ -200,7 +200,7 @@ router.post("/tasks/:id/complete", async (req, res) => {
     completedAt: now,
   }).returning();
 
-  res.status(201).json({
+  return res.status(201).json({
     id: completion.id,
     taskId: task.id,
     taskName: task.name,

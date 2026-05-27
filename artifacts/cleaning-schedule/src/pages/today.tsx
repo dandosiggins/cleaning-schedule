@@ -1,13 +1,15 @@
-import { useListTasksDueToday, useGetStats } from "@workspace/api-client-react";
+import { useListTasksDueToday, useGetStats, useListUpcomingTasks } from "@workspace/api-client-react";
 import { TaskCard } from "@/components/task-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { CheckCircle2, ListTodo, AlertCircle } from "lucide-react";
+import { CheckCircle2, ListTodo, AlertCircle, CalendarClock } from "lucide-react";
 import { useMemo } from "react";
+import { format, parseISO } from "date-fns";
 
 export default function TodayPage() {
   const { data: tasks, isLoading: isLoadingTasks } = useListTasksDueToday();
   const { data: stats, isLoading: isLoadingStats } = useGetStats();
+  const { data: upcomingTasks, isLoading: isLoadingUpcoming } = useListUpcomingTasks();
 
   const groupedTasks = useMemo(() => {
     if (!tasks) return {};
@@ -105,6 +107,41 @@ export default function TodayPage() {
           ))
         )}
       </div>
+
+      {/* Coming Up Soon */}
+      {(isLoadingUpcoming || (upcomingTasks && upcomingTasks.length > 0)) && (
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold text-foreground flex items-center gap-3">
+            <CalendarClock className="w-5 h-5 text-muted-foreground" />
+            Coming Up Soon
+            <span className="text-xs font-semibold text-muted-foreground bg-muted px-2.5 py-1 rounded-md">next 7 days</span>
+          </h2>
+          {isLoadingUpcoming ? (
+            <div className="space-y-3">
+              <Skeleton className="h-16 w-full rounded-2xl" />
+              <Skeleton className="h-16 w-full rounded-2xl" />
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {upcomingTasks!.map(task => (
+                <Card key={task.id} className="bg-card border-border shadow-none rounded-xl">
+                  <CardContent className="p-4 flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="font-semibold text-foreground truncate">{task.name}</p>
+                      <p className="text-sm text-muted-foreground">{task.room} · {task.frequency}</p>
+                    </div>
+                    {task.nextDueAt && (
+                      <span className="shrink-0 text-sm font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-lg">
+                        {format(parseISO(task.nextDueAt), "EEE, MMM d")}
+                      </span>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
