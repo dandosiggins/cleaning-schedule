@@ -1,5 +1,5 @@
 kind = "web"
-previewPath = "/cleaning-schedule"
+previewPath = "/"
 title = "Home Cleaning Schedule"
 version = "1.0.0"
 id = "artifacts/cleaning-schedule"
@@ -11,7 +11,7 @@ version = "1.0.0"
 
 [[services]]
 name = "web"
-paths = [ "/cleaning-schedule" ]
+paths = [ "/" ]
 localPort = 8082
 
 [services.development]
@@ -28,4 +28,4 @@ to = "/index.html"
 
 [services.env]
 PORT = "8082"
-BASE_PATH = "/cleaning-schedule"
+BASE_PATH = "/"
