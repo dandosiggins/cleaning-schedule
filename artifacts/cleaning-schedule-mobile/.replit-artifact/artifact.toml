@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/mobile/"
+title = "Tidy Home Mobile"
+version = "1.0.0"
+id = "artifacts/cleaning-schedule-mobile"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/mobile/" ]
+localPort = 26008
+
+[services.development]
+run = "pnpm --filter @workspace/cleaning-schedule-mobile run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/cleaning-schedule-mobile", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/cleaning-schedule-mobile", "run", "serve" ]
+
+[services.env]
+PORT = "26008"
+BASE_PATH = "/mobile/"
