@@ -131,7 +131,7 @@ export default function ScheduleScreen() {
           {
             backgroundColor: colors.primary,
             borderRadius: colors.radius + 8,
-            bottom: Platform.OS === "web" ? 34 + 16 : insets.bottom + 16,
+            bottom: Platform.OS === "web" ? 84 + 16 : insets.bottom + 16,
           },
         ]}
       >
