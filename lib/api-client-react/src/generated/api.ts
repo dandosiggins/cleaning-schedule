@@ -23,9 +23,17 @@ import type {
   CleaningTask,
   CompleteTaskInput,
   CreateTaskInput,
+  CreateMealInput,
+  CreateMemberInput,
+  CreateShoppingItemInput,
   HealthStatus,
   ListCompletionsParams,
+  ListMealsParams,
+  ListShoppingParams,
+  MealPlan,
+  Member,
   ScheduleStats,
+  ShoppingItem,
   TaskCompletion,
   UpdateTaskInput
 } from './api.schemas';
@@ -941,6 +949,88 @@ export const useDeleteMember = <TError = ErrorType<unknown>, TContext = unknown>
   options?: { mutation?: UseMutationOptions<Awaited<ReturnType<typeof deleteMember>>, TError, { id: number }, TContext>; request?: SecondParameter<typeof customFetch> }
 ): UseMutationResult<Awaited<ReturnType<typeof deleteMember>>, TError, { id: number }, TContext> =>
   useMutation(getDeleteMemberMutationOptions(options));
+
+// ─── Meal Plans ───────────────────────────────────────────────────────────────
+
+export const getListMealsQueryKey = (params: ListMealsParams) => [`/api/meals`, params] as const;
+
+export const listMeals = async (params: ListMealsParams, options?: RequestInit): Promise<MealPlan[]> =>
+  customFetch<MealPlan[]>(`/api/meals?weekStart=${params.weekStart}`, { ...options, method: 'GET' });
+
+export const useListMeals = <TData = MealPlan[], TError = ErrorType<unknown>>(
+  params: ListMealsParams,
+  options?: { query?: UseQueryOptions<MealPlan[], TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListMealsQueryKey(params);
+  const queryFn: QueryFunction<MealPlan[]> = () => listMeals(params, requestOptions);
+  return useQuery({ queryKey, queryFn, ...queryOptions });
+};
+
+export const createMeal = async (data: CreateMealInput, options?: RequestInit): Promise<MealPlan> =>
+  customFetch<MealPlan>(`/api/meals`, { ...options, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+
+export const getCreateMealMutationOptions = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<MealPlan, TError, CreateMealInput, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationOptions<MealPlan, TError, CreateMealInput, TContext> => {
+  const { mutation: mutationOptions, request: requestOptions } = options ?? {};
+  const mutationFn: MutationFunction<MealPlan, CreateMealInput> = (data) => createMeal(data, requestOptions);
+  return { mutationFn, ...mutationOptions };
+};
+
+export const useCreateMeal = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<MealPlan, TError, CreateMealInput, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<MealPlan, TError, CreateMealInput, TContext> =>
+  useMutation(getCreateMealMutationOptions(options));
+
+export const deleteMealPlan = async (id: number, options?: RequestInit): Promise<void> =>
+  customFetch<void>(`/api/meals/${id}`, { ...options, method: 'DELETE' });
+
+export const useDeleteMealPlan = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<void, TError, { id: number }, TContext> =>
+  useMutation({ mutationFn: ({ id }) => deleteMealPlan(id), ...options?.mutation });
+
+// ─── Shopping Items ───────────────────────────────────────────────────────────
+
+export const getListShoppingQueryKey = (params: ListShoppingParams) => [`/api/shopping`, params] as const;
+
+export const listShopping = async (params: ListShoppingParams, options?: RequestInit): Promise<ShoppingItem[]> =>
+  customFetch<ShoppingItem[]>(`/api/shopping?weekStart=${params.weekStart}`, { ...options, method: 'GET' });
+
+export const useListShopping = <TData = ShoppingItem[], TError = ErrorType<unknown>>(
+  params: ListShoppingParams,
+  options?: { query?: UseQueryOptions<ShoppingItem[], TError, TData>; request?: SecondParameter<typeof customFetch> }
+): UseQueryResult<TData, TError> => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+  const queryKey = queryOptions?.queryKey ?? getListShoppingQueryKey(params);
+  const queryFn: QueryFunction<ShoppingItem[]> = () => listShopping(params, requestOptions);
+  return useQuery({ queryKey, queryFn, ...queryOptions });
+};
+
+export const createShoppingItem = async (data: CreateShoppingItemInput, options?: RequestInit): Promise<ShoppingItem> =>
+  customFetch<ShoppingItem>(`/api/shopping`, { ...options, method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+
+export const useCreateShoppingItem = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<ShoppingItem, TError, CreateShoppingItemInput, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<ShoppingItem, TError, CreateShoppingItemInput, TContext> =>
+  useMutation({ mutationFn: (data) => createShoppingItem(data), ...options?.mutation });
+
+export const toggleShoppingItem = async (id: number, checked: boolean, options?: RequestInit): Promise<ShoppingItem> =>
+  customFetch<ShoppingItem>(`/api/shopping/${id}`, { ...options, method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ checked }) });
+
+export const useToggleShoppingItem = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<ShoppingItem, TError, { id: number; checked: boolean }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<ShoppingItem, TError, { id: number; checked: boolean }, TContext> =>
+  useMutation({ mutationFn: ({ id, checked }) => toggleShoppingItem(id, checked), ...options?.mutation });
+
+export const deleteShoppingItem = async (id: number, options?: RequestInit): Promise<void> =>
+  customFetch<void>(`/api/shopping/${id}`, { ...options, method: 'DELETE' });
+
+export const useDeleteShoppingItem = <TError = ErrorType<unknown>, TContext = unknown>(
+  options?: { mutation?: UseMutationOptions<void, TError, { id: number }, TContext>; request?: SecondParameter<typeof customFetch> }
+): UseMutationResult<void, TError, { id: number }, TContext> =>
+  useMutation({ mutationFn: ({ id }) => deleteShoppingItem(id), ...options?.mutation });
 
 
 

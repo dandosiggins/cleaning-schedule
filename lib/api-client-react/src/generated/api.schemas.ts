@@ -107,3 +107,39 @@ export interface Member {
 export interface CreateMemberInput {
   name: string;
 }
+
+export type MealType = 'breakfast' | 'lunch' | 'dinner';
+
+export interface MealPlan {
+  id: number;
+  weekStart: string;
+  dayOfWeek: number;
+  mealType: MealType;
+  title: string;
+  notes?: string | null;
+  createdAt: string;
+}
+
+export interface CreateMealInput {
+  weekStart: string;
+  dayOfWeek: number;
+  mealType: MealType;
+  title: string;
+  notes?: string | null;
+}
+
+export interface ShoppingItem {
+  id: number;
+  weekStart: string;
+  name: string;
+  checked: boolean;
+  createdAt: string;
+}
+
+export interface CreateShoppingItemInput {
+  weekStart: string;
+  name: string;
+}
+
+export type ListMealsParams = { weekStart: string };
+export type ListShoppingParams = { weekStart: string };

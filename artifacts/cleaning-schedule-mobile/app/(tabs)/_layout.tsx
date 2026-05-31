@@ -27,6 +27,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "person.2", selected: "person.2.fill" }} />
         <Label>People</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="meals">
+        <Icon sf={{ default: "fork.knife", selected: "fork.knife" }} />
+        <Label>Meals</Label>
+      </NativeTabs.Trigger>
     </NativeTabs>
   );
 }
@@ -111,6 +115,18 @@ function ClassicTabLayout() {
               <SymbolView name="person.2" tintColor={color} size={24} />
             ) : (
               <Feather name="users" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="meals"
+        options={{
+          title: "Meals",
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="fork.knife" tintColor={color} size={24} />
+            ) : (
+              <Feather name="coffee" size={22} color={color} />
             ),
         }}
       />
