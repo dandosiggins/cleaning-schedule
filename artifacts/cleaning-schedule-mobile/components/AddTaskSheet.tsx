@@ -18,6 +18,7 @@ import {
   useCreateTask,
   useUpdateTask,
   useListTasks,
+  useListMembers,
   getListTasksQueryKey,
   getListTasksDueTodayQueryKey,
   getListUpcomingTasksQueryKey,
@@ -42,12 +43,14 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const { data: allTasks } = useListTasks();
+  const { data: members } = useListMembers();
 
   const [name, setName] = useState("");
   const [room, setRoom] = useState("");
   const [frequency, setFrequency] = useState<Frequency>("weekly");
   const [customDays, setCustomDays] = useState("7");
   const [notes, setNotes] = useState("");
+  const [assignedMemberId, setAssignedMemberId] = useState<number | null>(null);
   const [showRoomSuggestions, setShowRoomSuggestions] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -67,12 +70,14 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
         setFrequency(task.frequency as Frequency);
         setCustomDays(task.customIntervalDays?.toString() ?? "7");
         setNotes(task.notes ?? "");
+        setAssignedMemberId(task.assignedMemberId ?? null);
       } else {
         setName("");
         setRoom("");
         setFrequency("weekly");
         setCustomDays("7");
         setNotes("");
+        setAssignedMemberId(null);
       }
       setErrors({});
       setShowRoomSuggestions(false);
@@ -105,6 +110,7 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
       frequency,
       customIntervalDays: frequency === "custom" ? Number(customDays) : null,
       notes: notes.trim() || null,
+      assignedMemberId,
     };
 
     if (task) {
@@ -152,15 +158,7 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>TASK NAME</Text>
             <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: errors.name ? colors.destructive : colors.border,
-                  color: colors.foreground,
-                  borderRadius: colors.radius,
-                },
-              ]}
+              style={[styles.input, { backgroundColor: colors.card, borderColor: errors.name ? colors.destructive : colors.border, color: colors.foreground, borderRadius: colors.radius }]}
               placeholder="e.g. Vacuum living room"
               placeholderTextColor={colors.mutedForeground}
               value={name}
@@ -173,34 +171,18 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>ROOM</Text>
             <TextInput
-              style={[
-                styles.input,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: errors.room ? colors.destructive : colors.border,
-                  color: colors.foreground,
-                  borderRadius: colors.radius,
-                },
-              ]}
+              style={[styles.input, { backgroundColor: colors.card, borderColor: errors.room ? colors.destructive : colors.border, color: colors.foreground, borderRadius: colors.radius }]}
               placeholder="e.g. Kitchen"
               placeholderTextColor={colors.mutedForeground}
               value={room}
-              onChangeText={(v) => {
-                setRoom(v);
-                setErrors((e) => ({ ...e, room: "" }));
-                setShowRoomSuggestions(true);
-              }}
+              onChangeText={(v) => { setRoom(v); setErrors((e) => ({ ...e, room: "" })); setShowRoomSuggestions(true); }}
               onBlur={() => setTimeout(() => setShowRoomSuggestions(false), 150)}
             />
             {errors.room ? <Text style={[styles.error, { color: colors.destructive }]}>{errors.room}</Text> : null}
             {showRoomSuggestions && filteredRooms.length > 0 && (
               <View style={[styles.suggestions, { backgroundColor: colors.card, borderColor: colors.border, borderRadius: colors.radius }]}>
                 {filteredRooms.map((r) => (
-                  <Pressable
-                    key={r}
-                    onPress={() => { setRoom(r); setShowRoomSuggestions(false); }}
-                    style={[styles.suggestion, { borderBottomColor: colors.border }]}
-                  >
+                  <Pressable key={r} onPress={() => { setRoom(r); setShowRoomSuggestions(false); }} style={[styles.suggestion, { borderBottomColor: colors.border }]}>
                     <Text style={[styles.suggestionText, { color: colors.foreground }]}>{r}</Text>
                   </Pressable>
                 ))}
@@ -212,23 +194,8 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
             <Text style={[styles.label, { color: colors.mutedForeground }]}>FREQUENCY</Text>
             <View style={styles.chips}>
               {FREQUENCIES.map((f) => (
-                <Pressable
-                  key={f}
-                  onPress={() => setFrequency(f)}
-                  style={[
-                    styles.chip,
-                    {
-                      backgroundColor: frequency === f ? colors.primary : colors.muted,
-                      borderRadius: colors.radius - 4,
-                    },
-                  ]}
-                >
-                  <Text
-                    style={[
-                      styles.chipText,
-                      { color: frequency === f ? colors.primaryForeground : colors.mutedForeground },
-                    ]}
-                  >
+                <Pressable key={f} onPress={() => setFrequency(f)} style={[styles.chip, { backgroundColor: frequency === f ? colors.primary : colors.muted, borderRadius: colors.radius - 4 }]}>
+                  <Text style={[styles.chipText, { color: frequency === f ? colors.primaryForeground : colors.mutedForeground }]}>
                     {f.charAt(0).toUpperCase() + f.slice(1)}
                   </Text>
                 </Pressable>
@@ -240,16 +207,7 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
             <View style={styles.field}>
               <Text style={[styles.label, { color: colors.mutedForeground }]}>EVERY N DAYS</Text>
               <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: colors.card,
-                    borderColor: errors.customDays ? colors.destructive : colors.border,
-                    color: colors.foreground,
-                    borderRadius: colors.radius,
-                    width: 100,
-                  },
-                ]}
+                style={[styles.input, { backgroundColor: colors.card, borderColor: errors.customDays ? colors.destructive : colors.border, color: colors.foreground, borderRadius: colors.radius, width: 100 }]}
                 keyboardType="number-pad"
                 value={customDays}
                 onChangeText={(v) => { setCustomDays(v); setErrors((e) => ({ ...e, customDays: "" })); }}
@@ -260,19 +218,38 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
             </View>
           )}
 
+          {/* Assignee picker */}
+          {members && members.length > 0 && (
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: colors.mutedForeground }]}>ASSIGN TO (OPTIONAL)</Text>
+              <View style={styles.chips}>
+                <Pressable
+                  onPress={() => setAssignedMemberId(null)}
+                  style={[styles.chip, { backgroundColor: assignedMemberId === null ? colors.primary : colors.muted, borderRadius: colors.radius - 4 }]}
+                >
+                  <Text style={[styles.chipText, { color: assignedMemberId === null ? colors.primaryForeground : colors.mutedForeground }]}>
+                    Anyone
+                  </Text>
+                </Pressable>
+                {members.map((m) => (
+                  <Pressable
+                    key={m.id}
+                    onPress={() => setAssignedMemberId(m.id)}
+                    style={[styles.chip, { backgroundColor: assignedMemberId === m.id ? colors.primary : colors.muted, borderRadius: colors.radius - 4 }]}
+                  >
+                    <Text style={[styles.chipText, { color: assignedMemberId === m.id ? colors.primaryForeground : colors.mutedForeground }]}>
+                      {m.name}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+            </View>
+          )}
+
           <View style={styles.field}>
             <Text style={[styles.label, { color: colors.mutedForeground }]}>NOTES (optional)</Text>
             <TextInput
-              style={[
-                styles.input,
-                styles.textarea,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: colors.border,
-                  color: colors.foreground,
-                  borderRadius: colors.radius,
-                },
-              ]}
+              style={[styles.input, styles.textarea, { backgroundColor: colors.card, borderColor: colors.border, color: colors.foreground, borderRadius: colors.radius }]}
               placeholder="Any extra details…"
               placeholderTextColor={colors.mutedForeground}
               value={notes}

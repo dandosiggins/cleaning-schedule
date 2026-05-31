@@ -13,4 +13,5 @@ export interface UpdateTaskInput {
   frequency?: UpdateTaskInputFrequency;
   customIntervalDays?: number | null;
   notes?: string | null;
+  assignedMemberId?: number | null;
 }

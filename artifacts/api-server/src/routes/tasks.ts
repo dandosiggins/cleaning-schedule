@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { db, cleaningTasksTable, taskCompletionsTable } from "@workspace/db";
+import { db, cleaningTasksTable, taskCompletionsTable, membersTable } from "@workspace/db";
 import { eq, desc, and, lte, gte, sql } from "drizzle-orm";
 import {
   CreateTaskBody,
@@ -30,7 +30,9 @@ function computeNextDueAt(frequency: string, customIntervalDays: number | null |
   return next;
 }
 
-function toApiTask(task: typeof cleaningTasksTable.$inferSelect) {
+type TaskRow = typeof cleaningTasksTable.$inferSelect;
+
+function toApiTask(task: TaskRow, memberName?: string | null) {
   const now = new Date();
   const isOverdue = task.nextDueAt != null && task.nextDueAt < now;
   return {
@@ -40,6 +42,8 @@ function toApiTask(task: typeof cleaningTasksTable.$inferSelect) {
     frequency: task.frequency,
     customIntervalDays: task.customIntervalDays ?? null,
     notes: task.notes ?? null,
+    assignedMemberId: task.assignedMemberId ?? null,
+    assignedMemberName: memberName ?? null,
     lastCompletedAt: task.lastCompletedAt?.toISOString() ?? null,
     nextDueAt: task.nextDueAt?.toISOString() ?? null,
     isOverdue,
@@ -48,10 +52,24 @@ function toApiTask(task: typeof cleaningTasksTable.$inferSelect) {
   };
 }
 
+async function selectTasksWithMembers(where?: Parameters<typeof db.select>[0]) {
+  return db
+    .select({
+      task: cleaningTasksTable,
+      memberName: membersTable.name,
+    })
+    .from(cleaningTasksTable)
+    .leftJoin(membersTable, eq(cleaningTasksTable.assignedMemberId, membersTable.id));
+}
+
 // GET /tasks
 router.get("/tasks", async (_req, res) => {
-  const tasks = await db.select().from(cleaningTasksTable).orderBy(cleaningTasksTable.room, cleaningTasksTable.name);
-  res.json(tasks.map(toApiTask));
+  const rows = await db
+    .select({ task: cleaningTasksTable, memberName: membersTable.name })
+    .from(cleaningTasksTable)
+    .leftJoin(membersTable, eq(cleaningTasksTable.assignedMemberId, membersTable.id))
+    .orderBy(cleaningTasksTable.room, cleaningTasksTable.name);
+  res.json(rows.map(r => toApiTask(r.task, r.memberName)));
 });
 
 // POST /tasks
@@ -60,7 +78,7 @@ router.post("/tasks", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error });
   }
-  const { name, room, frequency, customIntervalDays, notes } = parsed.data;
+  const { name, room, frequency, customIntervalDays, notes, assignedMemberId } = parsed.data as typeof parsed.data & { assignedMemberId?: number | null };
   const nextDueAt = computeNextDueAt(frequency, customIntervalDays);
   const [task] = await db.insert(cleaningTasksTable).values({
     name,
@@ -68,9 +86,16 @@ router.post("/tasks", async (req, res) => {
     frequency,
     customIntervalDays: customIntervalDays ?? null,
     notes: notes ?? null,
+    assignedMemberId: assignedMemberId ?? null,
     nextDueAt,
   }).returning();
-  return res.status(201).json(toApiTask(task));
+
+  let memberName: string | null = null;
+  if (task.assignedMemberId) {
+    const [m] = await db.select().from(membersTable).where(eq(membersTable.id, task.assignedMemberId));
+    memberName = m?.name ?? null;
+  }
+  return res.status(201).json(toApiTask(task, memberName));
 });
 
 // GET /tasks/due-today
@@ -78,10 +103,13 @@ router.get("/tasks/due-today", async (_req, res) => {
   const now = new Date();
   const endOfDay = new Date(now);
   endOfDay.setHours(23, 59, 59, 999);
-  const tasks = await db.select().from(cleaningTasksTable).where(
-    lte(cleaningTasksTable.nextDueAt, endOfDay)
-  ).orderBy(cleaningTasksTable.nextDueAt);
-  res.json(tasks.map(toApiTask));
+  const rows = await db
+    .select({ task: cleaningTasksTable, memberName: membersTable.name })
+    .from(cleaningTasksTable)
+    .leftJoin(membersTable, eq(cleaningTasksTable.assignedMemberId, membersTable.id))
+    .where(lte(cleaningTasksTable.nextDueAt, endOfDay))
+    .orderBy(cleaningTasksTable.nextDueAt);
+  res.json(rows.map(r => toApiTask(r.task, r.memberName)));
 });
 
 // GET /tasks/upcoming
@@ -89,13 +117,13 @@ router.get("/tasks/upcoming", async (_req, res) => {
   const now = new Date();
   const in7Days = new Date(now);
   in7Days.setDate(in7Days.getDate() + 7);
-  const tasks = await db.select().from(cleaningTasksTable).where(
-    and(
-      gte(cleaningTasksTable.nextDueAt, now),
-      lte(cleaningTasksTable.nextDueAt, in7Days)
-    )
-  ).orderBy(cleaningTasksTable.nextDueAt);
-  res.json(tasks.map(toApiTask));
+  const rows = await db
+    .select({ task: cleaningTasksTable, memberName: membersTable.name })
+    .from(cleaningTasksTable)
+    .leftJoin(membersTable, eq(cleaningTasksTable.assignedMemberId, membersTable.id))
+    .where(and(gte(cleaningTasksTable.nextDueAt, now), lte(cleaningTasksTable.nextDueAt, in7Days)))
+    .orderBy(cleaningTasksTable.nextDueAt);
+  res.json(rows.map(r => toApiTask(r.task, r.memberName)));
 });
 
 // GET /tasks/stats
@@ -133,9 +161,13 @@ router.get("/tasks/stats", async (_req, res) => {
 router.get("/tasks/:id", async (req, res) => {
   const parsed = GetTaskParams.safeParse({ id: Number(req.params.id) });
   if (!parsed.success) return res.status(400).json({ error: "Invalid id" });
-  const [task] = await db.select().from(cleaningTasksTable).where(eq(cleaningTasksTable.id, parsed.data.id));
-  if (!task) return res.status(404).json({ error: "Task not found" });
-  return res.json(toApiTask(task));
+  const rows = await db
+    .select({ task: cleaningTasksTable, memberName: membersTable.name })
+    .from(cleaningTasksTable)
+    .leftJoin(membersTable, eq(cleaningTasksTable.assignedMemberId, membersTable.id))
+    .where(eq(cleaningTasksTable.id, parsed.data.id));
+  if (!rows[0]) return res.status(404).json({ error: "Task not found" });
+  return res.json(toApiTask(rows[0].task, rows[0].memberName));
 });
 
 // PUT /tasks/:id
@@ -148,22 +180,33 @@ router.put("/tasks/:id", async (req, res) => {
   const existing = await db.select().from(cleaningTasksTable).where(eq(cleaningTasksTable.id, paramsParsed.data.id));
   if (!existing[0]) return res.status(404).json({ error: "Task not found" });
 
+  const body = bodyParsed.data as typeof bodyParsed.data & { assignedMemberId?: number | null };
+
   const updates: Partial<typeof cleaningTasksTable.$inferInsert> = {
-    ...bodyParsed.data,
+    ...body,
     updatedAt: new Date(),
   };
-  if (bodyParsed.data.frequency) {
-    const freq = bodyParsed.data.frequency;
-    const interval = bodyParsed.data.customIntervalDays ?? existing[0].customIntervalDays;
+  if (body.frequency) {
+    const freq = body.frequency;
+    const interval = body.customIntervalDays ?? existing[0].customIntervalDays;
     const base = existing[0].lastCompletedAt ?? new Date();
     updates.nextDueAt = computeNextDueAt(freq, interval, base);
+  }
+  if ("assignedMemberId" in body) {
+    updates.assignedMemberId = body.assignedMemberId ?? null;
   }
 
   const [task] = await db.update(cleaningTasksTable)
     .set(updates)
     .where(eq(cleaningTasksTable.id, paramsParsed.data.id))
     .returning();
-  return res.json(toApiTask(task));
+
+  let memberName: string | null = null;
+  if (task.assignedMemberId) {
+    const [m] = await db.select().from(membersTable).where(eq(membersTable.id, task.assignedMemberId));
+    memberName = m?.name ?? null;
+  }
+  return res.json(toApiTask(task, memberName));
 });
 
 // DELETE /tasks/:id

@@ -26,6 +26,8 @@ export interface CleaningTask {
   frequency: CleaningTaskFrequency;
   customIntervalDays?: number | null;
   notes?: string | null;
+  assignedMemberId?: number | null;
+  assignedMemberName?: string | null;
   lastCompletedAt?: string | null;
   nextDueAt?: string | null;
   isOverdue: boolean;
@@ -49,6 +51,7 @@ export interface CreateTaskInput {
   frequency: CreateTaskInputFrequency;
   customIntervalDays?: number | null;
   notes?: string | null;
+  assignedMemberId?: number | null;
 }
 
 export type UpdateTaskInputFrequency = typeof UpdateTaskInputFrequency[keyof typeof UpdateTaskInputFrequency];
@@ -67,6 +70,7 @@ export interface UpdateTaskInput {
   frequency?: UpdateTaskInputFrequency;
   customIntervalDays?: number | null;
   notes?: string | null;
+  assignedMemberId?: number | null;
 }
 
 export interface TaskCompletion {
@@ -94,3 +98,12 @@ export type ListCompletionsParams = {
 limit?: number;
 };
 
+export interface Member {
+  id: number;
+  name: string;
+  createdAt: string;
+}
+
+export interface CreateMemberInput {
+  name: string;
+}

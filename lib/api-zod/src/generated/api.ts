@@ -27,6 +27,8 @@ export const ListTasksResponseItem = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
+  "assignedMemberId": zod.number().nullish(),
+  "assignedMemberName": zod.string().nullish(),
   "lastCompletedAt": zod.coerce.date().nullish(),
   "nextDueAt": zod.coerce.date().nullish(),
   "isOverdue": zod.boolean(),
@@ -44,7 +46,8 @@ export const CreateTaskBody = zod.object({
   "room": zod.string(),
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
-  "notes": zod.string().nullish()
+  "notes": zod.string().nullish(),
+  "assignedMemberId": zod.number().nullish(),
 })
 
 
@@ -62,6 +65,8 @@ export const GetTaskResponse = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
+  "assignedMemberId": zod.number().nullish(),
+  "assignedMemberName": zod.string().nullish(),
   "lastCompletedAt": zod.coerce.date().nullish(),
   "nextDueAt": zod.coerce.date().nullish(),
   "isOverdue": zod.boolean(),
@@ -82,7 +87,8 @@ export const UpdateTaskBody = zod.object({
   "room": zod.string().optional(),
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']).optional(),
   "customIntervalDays": zod.number().nullish(),
-  "notes": zod.string().nullish()
+  "notes": zod.string().nullish(),
+  "assignedMemberId": zod.number().nullish(),
 })
 
 export const UpdateTaskResponse = zod.object({
@@ -92,6 +98,8 @@ export const UpdateTaskResponse = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
+  "assignedMemberId": zod.number().nullish(),
+  "assignedMemberName": zod.string().nullish(),
   "lastCompletedAt": zod.coerce.date().nullish(),
   "nextDueAt": zod.coerce.date().nullish(),
   "isOverdue": zod.boolean(),
@@ -118,6 +126,8 @@ export const ListTasksDueTodayResponseItem = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
+  "assignedMemberId": zod.number().nullish(),
+  "assignedMemberName": zod.string().nullish(),
   "lastCompletedAt": zod.coerce.date().nullish(),
   "nextDueAt": zod.coerce.date().nullish(),
   "isOverdue": zod.boolean(),
@@ -137,6 +147,8 @@ export const ListUpcomingTasksResponseItem = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
+  "assignedMemberId": zod.number().nullish(),
+  "assignedMemberName": zod.string().nullish(),
   "lastCompletedAt": zod.coerce.date().nullish(),
   "nextDueAt": zod.coerce.date().nullish(),
   "isOverdue": zod.boolean(),
@@ -190,3 +202,32 @@ export const ListCompletionsResponseItem = zod.object({
 export const ListCompletionsResponse = zod.array(ListCompletionsResponseItem)
 
 
+/**
+ * @summary List all members
+ */
+export const ListMembersResponseItem = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMembersResponse = zod.array(ListMembersResponseItem)
+
+/**
+ * @summary Create a member
+ */
+export const CreateMemberBody = zod.object({
+  "name": zod.string().min(1)
+})
+
+export const CreateMemberResponse = zod.object({
+  "id": zod.number(),
+  "name": zod.string(),
+  "createdAt": zod.coerce.date()
+})
+
+/**
+ * @summary Delete a member
+ */
+export const DeleteMemberParams = zod.object({
+  "id": zod.coerce.number()
+})

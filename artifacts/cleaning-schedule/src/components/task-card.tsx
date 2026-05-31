@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Check, Clock, MoreVertical, Trash, Edit3, Calendar } from "lucide-react";
+import { Check, Clock, MoreVertical, Trash, Edit3, Calendar, User } from "lucide-react";
 import { CleaningTask } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,11 +9,11 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { TaskFormDialog } from "./task-form-dialog";
 
-export function TaskCard({ 
-  task, 
-  showActions = true 
-}: { 
-  task: CleaningTask; 
+export function TaskCard({
+  task,
+  showActions = true,
+}: {
+  task: CleaningTask;
   showActions?: boolean;
 }) {
   const queryClient = useQueryClient();
@@ -21,33 +21,20 @@ export function TaskCard({
   const deleteTask = useDeleteTask();
   const [isEditing, setIsEditing] = useState(false);
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: getListTasksDueTodayQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListUpcomingTasksQueryKey() });
+  };
+
   const handleComplete = () => {
-    completeTask.mutate(
-      { id: task.id },
-      {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListTasksDueTodayQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListUpcomingTasksQueryKey() });
-        }
-      }
-    );
+    completeTask.mutate({ id: task.id }, { onSuccess: invalidate });
   };
 
   const handleDelete = () => {
     if (confirm("Are you sure you want to delete this task?")) {
-      deleteTask.mutate(
-        { id: task.id },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: getListTasksDueTodayQueryKey() });
-            queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-            queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
-            queryClient.invalidateQueries({ queryKey: getListUpcomingTasksQueryKey() });
-          }
-        }
-      );
+      deleteTask.mutate({ id: task.id }, { onSuccess: invalidate });
     }
   };
 
@@ -68,12 +55,12 @@ export function TaskCard({
 
         <div className="flex-1 min-w-0 pt-0.5">
           <div className="flex justify-between items-start gap-2">
-            <div>
+            <div className="min-w-0">
               <h3 className="font-medium text-base leading-tight truncate">{task.name}</h3>
-              <p className="text-sm text-muted-foreground mt-1">{task.room}</p>
+              <p className="text-sm text-muted-foreground mt-0.5">{task.room}</p>
             </div>
-            
-            <div className="flex items-center gap-2">
+
+            <div className="flex items-center gap-2 flex-shrink-0">
               {task.isOverdue && (
                 <Badge variant="destructive" className="font-medium text-xs px-2 py-0.5 rounded-md">Overdue</Badge>
               )}
@@ -99,10 +86,10 @@ export function TaskCard({
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mt-4">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-3">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
               <Clock className="w-3.5 h-3.5" />
-              <span className="capitalize">{task.frequency} {task.frequency === 'custom' && task.customIntervalDays ? `(${task.customIntervalDays} days)` : ''}</span>
+              <span className="capitalize">{task.frequency}{task.frequency === 'custom' && task.customIntervalDays ? ` (${task.customIntervalDays}d)` : ''}</span>
             </div>
             {task.nextDueAt && (
               <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md ${task.isOverdue ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'}`}>
@@ -110,16 +97,18 @@ export function TaskCard({
                 <span>Due {format(new Date(task.nextDueAt), 'MMM d')}</span>
               </div>
             )}
+            {task.assignedMemberName && (
+              <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
+                <User className="w-3.5 h-3.5" />
+                <span>{task.assignedMemberName}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
-      
+
       {isEditing && (
-        <TaskFormDialog 
-          task={task} 
-          open={isEditing} 
-          onOpenChange={setIsEditing} 
-        />
+        <TaskFormDialog task={task} open={isEditing} onOpenChange={setIsEditing} />
       )}
     </>
   );

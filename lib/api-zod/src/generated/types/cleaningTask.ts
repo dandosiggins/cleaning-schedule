@@ -14,6 +14,8 @@ export interface CleaningTask {
   frequency: CleaningTaskFrequency;
   customIntervalDays?: number | null;
   notes?: string | null;
+  assignedMemberId?: number | null;
+  assignedMemberName?: string | null;
   lastCompletedAt?: Date | null;
   nextDueAt?: Date | null;
   isOverdue: boolean;

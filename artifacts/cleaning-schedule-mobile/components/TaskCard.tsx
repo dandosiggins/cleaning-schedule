@@ -70,13 +70,7 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
         onPress: () => {
           Alert.alert("Delete task?", "This cannot be undone.", [
             { text: "Cancel", style: "cancel" },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: () => {
-                deleteTask.mutate({ id: task.id }, { onSuccess: invalidate });
-              },
-            },
+            { text: "Delete", style: "destructive", onPress: () => deleteTask.mutate({ id: task.id }, { onSuccess: invalidate }) },
           ]);
         },
       },
@@ -93,13 +87,7 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
           <Pressable
             onPress={handleComplete}
             disabled={completeTask.isPending}
-            style={[
-              styles.completeBtn,
-              {
-                borderColor: task.isOverdue ? colors.destructive : colors.primary,
-                backgroundColor: "transparent",
-              },
-            ]}
+            style={[styles.completeBtn, { borderColor: task.isOverdue ? colors.destructive : colors.primary, backgroundColor: "transparent" }]}
             hitSlop={8}
           >
             {completeTask.isPending ? (
@@ -116,34 +104,22 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
           </Text>
           <View style={styles.meta}>
             <View style={[styles.badge, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.badgeText, { color: colors.mutedForeground }]}>
-                {task.room}
-              </Text>
+              <Text style={[styles.badgeText, { color: colors.mutedForeground }]}>{task.room}</Text>
             </View>
             <View style={[styles.badge, { backgroundColor: colors.muted }]}>
-              <Text style={[styles.badgeText, { color: colors.mutedForeground }]}>
-                {frequencyLabel(task)}
-              </Text>
+              <Text style={[styles.badgeText, { color: colors.mutedForeground }]}>{frequencyLabel(task)}</Text>
             </View>
             {dueLabel && (
-              <View
-                style={[
-                  styles.badge,
-                  {
-                    backgroundColor: task.isOverdue
-                      ? `${colors.destructive}18`
-                      : colors.muted,
-                  },
-                ]}
-              >
-                <Text
-                  style={[
-                    styles.badgeText,
-                    { color: task.isOverdue ? colors.destructive : colors.mutedForeground },
-                  ]}
-                >
+              <View style={[styles.badge, { backgroundColor: task.isOverdue ? `${colors.destructive}18` : colors.muted }]}>
+                <Text style={[styles.badgeText, { color: task.isOverdue ? colors.destructive : colors.mutedForeground }]}>
                   {task.isOverdue ? "Overdue" : dueLabel}
                 </Text>
+              </View>
+            )}
+            {task.assignedMemberName && (
+              <View style={[styles.badge, { backgroundColor: `${colors.primary}15` }]}>
+                <Feather name="user" size={9} color={colors.primary} style={{ marginRight: 3 }} />
+                <Text style={[styles.badgeText, { color: colors.primary }]}>{task.assignedMemberName}</Text>
               </View>
             )}
           </View>
@@ -154,11 +130,7 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
         </Pressable>
       </View>
 
-      <AddTaskSheet
-        visible={editOpen}
-        onClose={() => setEditOpen(false)}
-        task={task}
-      />
+      <AddTaskSheet visible={editOpen} onClose={() => setEditOpen(false)} task={task} />
     </>
   );
 }
@@ -194,11 +166,14 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 5,
+    alignItems: "center",
   },
   badge: {
     paddingHorizontal: 7,
     paddingVertical: 2,
     borderRadius: 6,
+    flexDirection: "row",
+    alignItems: "center",
   },
   badgeText: {
     fontSize: 11,

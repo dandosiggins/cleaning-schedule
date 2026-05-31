@@ -7,6 +7,7 @@ import { Layout } from "@/components/layout";
 import TodayPage from "@/pages/today";
 import SchedulePage from "@/pages/schedule";
 import HistoryPage from "@/pages/history";
+import PeoplePage from "@/pages/people";
 
 const queryClient = new QueryClient();
 
@@ -17,6 +18,7 @@ function Router() {
         <Route path="/" component={TodayPage} />
         <Route path="/schedule" component={SchedulePage} />
         <Route path="/history" component={HistoryPage} />
+        <Route path="/people" component={PeoplePage} />
         <Route component={NotFound} />
       </Switch>
     </Layout>

@@ -7,9 +7,14 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateTask, useUpdateTask, useListTasks, getListTasksQueryKey, getListTasksDueTodayQueryKey, getListUpcomingTasksQueryKey, getGetStatsQueryKey, CleaningTask, useGetTask, getGetTaskQueryKey } from "@workspace/api-client-react";
+import {
+  useCreateTask, useUpdateTask, useListTasks, useListMembers,
+  getListTasksQueryKey, getListTasksDueTodayQueryKey, getListUpcomingTasksQueryKey,
+  getGetStatsQueryKey, CleaningTask, useGetTask, getGetTaskQueryKey,
+} from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { User } from "lucide-react";
 
 const taskSchema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -17,16 +22,17 @@ const taskSchema = z.object({
   frequency: z.enum(["daily", "weekly", "monthly", "custom"]),
   customIntervalDays: z.coerce.number().min(1).nullable().optional(),
   notes: z.string().nullable().optional(),
+  assignedMemberId: z.number().nullable().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
 
-export function TaskFormDialog({ 
-  open, 
-  onOpenChange, 
-  task 
-}: { 
-  open: boolean; 
+export function TaskFormDialog({
+  open,
+  onOpenChange,
+  task,
+}: {
+  open: boolean;
   onOpenChange: (open: boolean) => void;
   task?: CleaningTask;
 }) {
@@ -34,12 +40,11 @@ export function TaskFormDialog({
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
   const { data: allTasks } = useListTasks();
-  
-  // Use useGetTask just to satisfy the requirement of using all hooks. 
-  // Normally we would just use the `task` prop.
+  const { data: members } = useListMembers();
+
   const { data: fetchedTask } = useGetTask(task?.id || 0, { query: { enabled: !!task?.id, queryKey: getGetTaskQueryKey(task?.id || 0) } });
   const activeTask = fetchedTask || task;
-  
+
   const [isNewRoom, setIsNewRoom] = useState(false);
 
   const existingRooms = Array.from(new Set((allTasks || []).map(t => t.room))).filter(Boolean);
@@ -52,6 +57,7 @@ export function TaskFormDialog({
       frequency: activeTask?.frequency || "weekly",
       customIntervalDays: activeTask?.customIntervalDays || null,
       notes: activeTask?.notes || "",
+      assignedMemberId: activeTask?.assignedMemberId ?? null,
     }
   });
 
@@ -65,6 +71,7 @@ export function TaskFormDialog({
         frequency: activeTask.frequency,
         customIntervalDays: activeTask.customIntervalDays,
         notes: activeTask.notes,
+        assignedMemberId: activeTask.assignedMemberId ?? null,
       });
       if (activeTask.room && !existingRooms.includes(activeTask.room)) {
         setIsNewRoom(true);
@@ -76,34 +83,24 @@ export function TaskFormDialog({
         frequency: "weekly",
         customIntervalDays: null,
         notes: "",
+        assignedMemberId: null,
       });
       setIsNewRoom(false);
     }
   }, [open, activeTask, form, existingRooms.length]);
 
+  const invalidate = () => {
+    queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListTasksDueTodayQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListUpcomingTasksQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
+  };
+
   const onSubmit = (values: TaskFormValues) => {
     if (activeTask) {
-      updateTask.mutate({ 
-        id: activeTask.id, 
-        data: values 
-      }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListTasksDueTodayQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListUpcomingTasksQueryKey() });
-          onOpenChange(false);
-        }
-      });
+      updateTask.mutate({ id: activeTask.id, data: values }, { onSuccess: () => { invalidate(); onOpenChange(false); } });
     } else {
-      createTask.mutate({ data: values }, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListTasksDueTodayQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
-          queryClient.invalidateQueries({ queryKey: getListUpcomingTasksQueryKey() });
-          onOpenChange(false);
-        }
-      });
+      createTask.mutate({ data: values }, { onSuccess: () => { invalidate(); onOpenChange(false); } });
     }
   };
 
@@ -150,12 +147,8 @@ export function TaskFormDialog({
                     </div>
                   ) : (
                     <Select onValueChange={(val) => {
-                      if (val === "new_room") {
-                        setIsNewRoom(true);
-                        field.onChange("");
-                      } else {
-                        field.onChange(val);
-                      }
+                      if (val === "new_room") { setIsNewRoom(true); field.onChange(""); }
+                      else { field.onChange(val); }
                     }} value={existingRooms.includes(field.value) ? field.value : undefined}>
                       <FormControl>
                         <SelectTrigger className="rounded-lg bg-muted/50">
@@ -217,6 +210,39 @@ export function TaskFormDialog({
               )}
             </div>
 
+            {/* Assignee picker */}
+            {members && members.length > 0 && (
+              <FormField
+                control={form.control}
+                name="assignedMemberId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="font-semibold text-foreground flex items-center gap-1.5">
+                      <User className="w-3.5 h-3.5" />
+                      Assign To <span className="text-muted-foreground font-normal">(Optional)</span>
+                    </FormLabel>
+                    <Select
+                      onValueChange={(val) => field.onChange(val === "unassigned" ? null : Number(val))}
+                      value={field.value != null ? String(field.value) : "unassigned"}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="rounded-lg bg-muted/50">
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="rounded-xl">
+                        <SelectItem value="unassigned" className="rounded-lg cursor-pointer text-muted-foreground">Unassigned</SelectItem>
+                        {members.map(m => (
+                          <SelectItem key={m.id} value={String(m.id)} className="rounded-lg cursor-pointer">{m.name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
             <FormField
               control={form.control}
               name="notes"
@@ -224,11 +250,11 @@ export function TaskFormDialog({
                 <FormItem>
                   <FormLabel className="font-semibold text-foreground">Notes <span className="text-muted-foreground font-normal">(Optional)</span></FormLabel>
                   <FormControl>
-                    <Textarea 
-                      placeholder="Special instructions or supplies needed..." 
-                      className="resize-none rounded-lg bg-muted/50 min-h-[100px]" 
-                      {...field} 
-                      value={field.value || ""} 
+                    <Textarea
+                      placeholder="Special instructions or supplies needed..."
+                      className="resize-none rounded-lg bg-muted/50 min-h-[80px]"
+                      {...field}
+                      value={field.value || ""}
                     />
                   </FormControl>
                   <FormMessage />
@@ -236,7 +262,7 @@ export function TaskFormDialog({
               )}
             />
 
-            <div className="flex justify-end pt-6 gap-3">
+            <div className="flex justify-end pt-4 gap-3">
               <Button type="button" variant="outline" className="rounded-xl px-6" onClick={() => onOpenChange(false)}>Cancel</Button>
               <Button type="submit" className="rounded-xl px-8 font-semibold shadow-md hover-elevate-2 no-default-hover-elevate" disabled={createTask.isPending || updateTask.isPending}>
                 {activeTask ? "Save Changes" : "Create Task"}

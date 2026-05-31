@@ -13,4 +13,5 @@ export interface CreateTaskInput {
   frequency: CreateTaskInputFrequency;
   customIntervalDays?: number | null;
   notes?: string | null;
+  assignedMemberId?: number | null;
 }

@@ -13,6 +13,7 @@ export * from './createTaskInput';
 export * from './createTaskInputFrequency';
 export * from './healthStatus';
 export * from './listCompletionsParams';
+export * from './member';
 export * from './scheduleStats';
 export * from './taskCompletion';
 export * from './updateTaskInput';
