@@ -1,10 +1,23 @@
-import { useListCompletions } from "@workspace/api-client-react";
+import { TaskCompletion, useListCompletions } from "@workspace/api-client-react";
 import { format } from "date-fns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CheckCircle2, Calendar } from "lucide-react";
+import { useMemo } from "react";
+
+function toCompletionArray(data: unknown): TaskCompletion[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { completions?: unknown; data?: unknown };
+    if (Array.isArray(value.completions)) return value.completions as TaskCompletion[];
+    if (Array.isArray(value.data)) return value.data as TaskCompletion[];
+  }
+  return [];
+}
 
 export default function HistoryPage() {
-  const { data: completions, isLoading } = useListCompletions({ limit: 50 });
+  const { data: completionsData, isLoading } = useListCompletions({ limit: 50 });
+  const completions = useMemo(() => toCompletionArray(completionsData), [completionsData]);
+  const safeCompletions = Array.isArray(completions) ? completions : [];
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -20,7 +33,7 @@ export default function HistoryPage() {
             <Skeleton className="h-16 w-full rounded-xl" />
             <Skeleton className="h-16 w-full rounded-xl" />
           </div>
-        ) : completions?.length === 0 ? (
+        ) : safeCompletions.length === 0 ? (
           <div className="text-center py-24 px-4">
             <div className="w-20 h-20 bg-muted rounded-3xl flex items-center justify-center mx-auto mb-6">
               <CheckCircle2 className="w-10 h-10 text-muted-foreground" />
@@ -30,7 +43,7 @@ export default function HistoryPage() {
           </div>
         ) : (
           <div className="divide-y divide-border/60">
-            {completions?.map((completion) => (
+            {safeCompletions.map((completion) => (
               <div key={completion.id} className="p-5 md:p-6 flex items-center gap-5 transition-colors hover:bg-muted/30">
                 <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
                   <CheckCircle2 className="w-6 h-6 text-primary" strokeWidth={2.5} />

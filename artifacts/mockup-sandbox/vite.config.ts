@@ -5,45 +5,51 @@ import path from "path";
 import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 import { mockupPreviewPlugin } from "./mockupPreviewPlugin";
 
-const rawPort = process.env.PORT;
+const getPort = (command: string) => {
+  const rawPort = process.env.PORT;
 
-if (!rawPort) {
-  throw new Error(
-    "PORT environment variable is required but was not provided.",
-  );
-}
+  if (!rawPort) {
+    if (command === "serve") {
+      throw new Error(
+        "PORT environment variable is required but was not provided.",
+      );
+    }
 
-const port = Number(rawPort);
+    return undefined;
+  }
 
-if (Number.isNaN(port) || port <= 0) {
-  throw new Error(`Invalid PORT value: "${rawPort}"`);
-}
+  const port = Number(rawPort);
 
-const basePath = process.env.BASE_PATH;
+  if (Number.isNaN(port) || port <= 0) {
+    throw new Error(`Invalid PORT value: "${rawPort}"`);
+  }
 
-if (!basePath) {
-  throw new Error(
-    "BASE_PATH environment variable is required but was not provided.",
-  );
-}
+  return port;
+};
 
-export default defineConfig({
+const cartographerPlugins =
+  process.env.NODE_ENV !== "production" && process.env.REPL_ID !== undefined
+    ? [
+        await import("@replit/vite-plugin-cartographer").then((m) =>
+          m.cartographer({
+            root: path.resolve(import.meta.dirname, ".."),
+          }),
+        ),
+      ]
+    : [];
+
+export default defineConfig(({ command }) => {
+  const port = getPort(command);
+  const basePath = process.env.BASE_PATH ?? "/";
+
+  return {
   base: basePath,
   plugins: [
     mockupPreviewPlugin(),
     react(),
     tailwindcss(),
     runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer({
-              root: path.resolve(import.meta.dirname, ".."),
-            }),
-          ),
-        ]
-      : []),
+    ...cartographerPlugins,
   ],
   resolve: {
     alias: {
@@ -56,7 +62,7 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port,
+    ...(port === undefined ? {} : { port }),
     host: "0.0.0.0",
     allowedHosts: true,
     fs: {
@@ -64,8 +70,9 @@ export default defineConfig({
     },
   },
   preview: {
-    port,
+    ...(port === undefined ? {} : { port }),
     host: "0.0.0.0",
     allowedHosts: true,
   },
+  };
 });

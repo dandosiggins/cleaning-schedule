@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useListMembers, useCreateMember, useDeleteMember, useListTasks, getListMembersQueryKey } from "@workspace/api-client-react";
+import type { CleaningTask, Member } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,16 +8,41 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, Trash2, Plus } from "lucide-react";
 
+function toMemberArray(data: unknown): Member[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { members?: unknown; people?: unknown; data?: unknown };
+    if (Array.isArray(value.members)) return value.members as Member[];
+    if (Array.isArray(value.people)) return value.people as Member[];
+    if (Array.isArray(value.data)) return value.data as Member[];
+  }
+  return [];
+}
+
+function toTaskArray(data: unknown): CleaningTask[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { tasks?: unknown; data?: unknown };
+    if (Array.isArray(value.tasks)) return value.tasks as CleaningTask[];
+    if (Array.isArray(value.data)) return value.data as CleaningTask[];
+  }
+  return [];
+}
+
 export default function PeoplePage() {
   const queryClient = useQueryClient();
-  const { data: members, isLoading } = useListMembers();
-  const { data: allTasks } = useListTasks();
+  const { data: membersData, isLoading } = useListMembers();
+  const { data: allTasksData } = useListTasks();
   const createMember = useCreateMember();
   const deleteMember = useDeleteMember();
   const [newName, setNewName] = useState("");
+  const members = useMemo(() => toMemberArray(membersData), [membersData]);
+  const allTasks = useMemo(() => toTaskArray(allTasksData), [allTasksData]);
+  const safeMembers = Array.isArray(members) ? members : [];
+  const safeAllTasks = Array.isArray(allTasks) ? allTasks : [];
 
   const taskCountByMember = (memberId: number) =>
-    (allTasks ?? []).filter(t => t.assignedMemberId === memberId).length;
+    safeAllTasks.filter(t => t.assignedMemberId === memberId).length;
 
   const handleAdd = () => {
     const name = newName.trim();
@@ -78,7 +104,7 @@ export default function PeoplePage() {
             <Skeleton className="h-16 w-full rounded-xl" />
             <Skeleton className="h-16 w-full rounded-xl" />
           </>
-        ) : members?.length === 0 ? (
+        ) : safeMembers.length === 0 ? (
           <div className="text-center py-16 px-4 border-2 border-dashed border-border rounded-3xl bg-card/40 shadow-sm">
             <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Users className="w-8 h-8 text-primary" />
@@ -87,7 +113,7 @@ export default function PeoplePage() {
             <p className="text-muted-foreground">Add household members above, then assign tasks to them.</p>
           </div>
         ) : (
-          members?.map(member => {
+          safeMembers.map(member => {
             const count = taskCountByMember(member.id);
             return (
               <div key={member.id} className="flex items-center gap-4 p-4 rounded-xl border border-border bg-card shadow-sm hover-elevate">

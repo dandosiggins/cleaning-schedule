@@ -78,24 +78,52 @@ router.post("/tasks", async (req, res) => {
   if (!parsed.success) {
     return res.status(400).json({ error: "Invalid input", details: parsed.error });
   }
-  const { name, room, frequency, customIntervalDays, notes, assignedMemberId } = parsed.data as typeof parsed.data & { assignedMemberId?: number | null };
-  const nextDueAt = computeNextDueAt(frequency, customIntervalDays);
-  const [task] = await db.insert(cleaningTasksTable).values({
-    name,
-    room,
-    frequency,
-    customIntervalDays: customIntervalDays ?? null,
-    notes: notes ?? null,
-    assignedMemberId: assignedMemberId ?? null,
-    nextDueAt,
-  }).returning();
 
-  let memberName: string | null = null;
-  if (task.assignedMemberId) {
-    const [m] = await db.select().from(membersTable).where(eq(membersTable.id, task.assignedMemberId));
-    memberName = m?.name ?? null;
+  const { frequency, customIntervalDays, notes, assignedMemberId } = parsed.data as typeof parsed.data & { assignedMemberId?: number | null };
+  const name = parsed.data.name.trim();
+  const room = parsed.data.room.trim();
+
+  if (!name) {
+    return res.status(400).json({ error: "Task name is required." });
   }
-  return res.status(201).json(toApiTask(task, memberName));
+
+  if (!room) {
+    return res.status(400).json({ error: "Room is required." });
+  }
+
+  if (frequency === "custom" && !customIntervalDays) {
+    return res.status(400).json({ error: "Custom frequency requires days between tasks." });
+  }
+
+  try {
+    const now = new Date();
+    const nextDueAt = computeNextDueAt(frequency, customIntervalDays, now);
+    const [task] = await db.insert(cleaningTasksTable).values({
+      name,
+      room,
+      frequency,
+      customIntervalDays: customIntervalDays ?? null,
+      notes: notes?.trim() ? notes.trim() : null,
+      assignedMemberId: assignedMemberId ?? null,
+      nextDueAt,
+      createdAt: now,
+      updatedAt: now,
+    }).returning();
+
+    if (!task) {
+      return res.status(500).json({ error: "Task was not created." });
+    }
+
+    let memberName: string | null = null;
+    if (task.assignedMemberId) {
+      const [m] = await db.select().from(membersTable).where(eq(membersTable.id, task.assignedMemberId));
+      memberName = m?.name ?? null;
+    }
+    return res.status(201).json(toApiTask(task, memberName));
+  } catch (err) {
+    req.log?.error({ err }, "Failed to create task");
+    return res.status(500).json({ error: "Failed to create task." });
+  }
 });
 
 // GET /tasks/due-today

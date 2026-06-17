@@ -1,4 +1,5 @@
 import { useListTasksDueToday, useGetStats, useListUpcomingTasks } from "@workspace/api-client-react";
+import type { CleaningTask } from "@workspace/api-client-react";
 import { TaskCard } from "@/components/task-card";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,21 +7,35 @@ import { CheckCircle2, ListTodo, AlertCircle, CalendarClock } from "lucide-react
 import { useMemo } from "react";
 import { format, parseISO } from "date-fns";
 
+function toTaskArray(data: unknown): CleaningTask[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { tasks?: unknown; data?: unknown };
+    if (Array.isArray(value.tasks)) return value.tasks as CleaningTask[];
+    if (Array.isArray(value.data)) return value.data as CleaningTask[];
+  }
+  return [];
+}
+
 export default function TodayPage() {
-  const { data: tasks, isLoading: isLoadingTasks } = useListTasksDueToday();
+  const { data: tasksData, isLoading: isLoadingTasks } = useListTasksDueToday();
   const { data: stats, isLoading: isLoadingStats } = useGetStats();
-  const { data: upcomingTasks, isLoading: isLoadingUpcoming } = useListUpcomingTasks();
+  const { data: upcomingTasksData, isLoading: isLoadingUpcoming } = useListUpcomingTasks();
+
+  const tasks = useMemo(() => toTaskArray(tasksData), [tasksData]);
+  const upcomingTasks = useMemo(() => toTaskArray(upcomingTasksData), [upcomingTasksData]);
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeUpcomingTasks = Array.isArray(upcomingTasks) ? upcomingTasks : [];
 
   const groupedTasks = useMemo(() => {
-    if (!tasks) return {};
-    return tasks.reduce((acc, task) => {
+    return safeTasks.reduce((acc, task) => {
       if (!acc[task.room]) {
         acc[task.room] = [];
       }
       acc[task.room].push(task);
       return acc;
-    }, {} as Record<string, typeof tasks>);
-  }, [tasks]);
+    }, {} as Record<string, CleaningTask[]>);
+  }, [safeTasks]);
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -81,7 +96,7 @@ export default function TodayPage() {
             <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-32 w-full rounded-2xl" />
           </div>
-        ) : tasks?.length === 0 ? (
+        ) : safeTasks.length === 0 ? (
           <div className="text-center py-20 px-4 border-2 border-dashed border-border rounded-3xl bg-card/40 mt-12 shadow-sm">
             <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center mx-auto mb-6 rotate-12">
               <CheckCircle2 className="w-10 h-10 text-primary -rotate-12" strokeWidth={2.5} />
@@ -109,7 +124,7 @@ export default function TodayPage() {
       </div>
 
       {/* Coming Up Soon */}
-      {(isLoadingUpcoming || (upcomingTasks && upcomingTasks.length > 0)) && (
+      {(isLoadingUpcoming || safeUpcomingTasks.length > 0) && (
         <div className="space-y-4">
           <h2 className="text-xl font-bold text-foreground flex items-center gap-3">
             <CalendarClock className="w-5 h-5 text-muted-foreground" />
@@ -123,7 +138,7 @@ export default function TodayPage() {
             </div>
           ) : (
             <div className="space-y-2">
-              {upcomingTasks!.map(task => (
+              {safeUpcomingTasks.map(task => (
                 <Card key={task.id} className="bg-card border-border shadow-none rounded-xl">
                   <CardContent className="p-4 flex items-center justify-between gap-4">
                     <div className="min-w-0">

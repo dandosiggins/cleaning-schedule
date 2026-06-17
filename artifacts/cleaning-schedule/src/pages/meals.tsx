@@ -13,7 +13,7 @@ import {
   getListMealsQueryKey,
   getListShoppingQueryKey,
 } from "@workspace/api-client-react";
-import type { MealType } from "@workspace/api-client-react";
+import type { MealPlan, MealType, ShoppingItem } from "@workspace/api-client-react";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MEAL_TYPES: MealType[] = ["breakfast", "lunch", "dinner"];
@@ -30,6 +30,27 @@ const MEAL_COLORS: Record<MealType, string> = {
 
 function getWeekStart(date: Date): string {
   return format(startOfWeek(date, { weekStartsOn: 1 }), "yyyy-MM-dd");
+}
+
+function toMealArray(data: unknown): MealPlan[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { meals?: unknown; data?: unknown };
+    if (Array.isArray(value.meals)) return value.meals as MealPlan[];
+    if (Array.isArray(value.data)) return value.data as MealPlan[];
+  }
+  return [];
+}
+
+function toShoppingArray(data: unknown): ShoppingItem[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { shopping?: unknown; items?: unknown; data?: unknown };
+    if (Array.isArray(value.shopping)) return value.shopping as ShoppingItem[];
+    if (Array.isArray(value.items)) return value.items as ShoppingItem[];
+    if (Array.isArray(value.data)) return value.data as ShoppingItem[];
+  }
+  return [];
 }
 
 interface AddMealPopoverProps {
@@ -49,7 +70,7 @@ function AddMealPopover({ dayOfWeek, mealType, weekStart, onClose }: AddMealPopo
     e.preventDefault();
     if (!title.trim()) return;
     createMeal.mutate(
-      { weekStart, dayOfWeek, mealType, title: title.trim(), notes: notes.trim() || null },
+      { data: { weekStart, dayOfWeek, mealType, title: title.trim(), notes: notes.trim() || null } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListMealsQueryKey({ weekStart }) });
@@ -114,22 +135,26 @@ export default function MealsPage() {
   const weekStart = getWeekStart(baseDate);
   const queryClient = useQueryClient();
 
-  const { data: meals = [] } = useListMeals({ weekStart });
-  const { data: shopping = [] } = useListShopping({ weekStart });
+  const { data: mealsData } = useListMeals({ weekStart });
+  const { data: shoppingData } = useListShopping({ weekStart });
   const createShoppingItem = useCreateShoppingItem();
   const toggleShoppingItem = useToggleShoppingItem();
   const deleteShoppingItem = useDeleteShoppingItem();
   const deleteMeal = useDeleteMealPlan();
+  const meals = useMemo(() => toMealArray(mealsData), [mealsData]);
+  const shopping = useMemo(() => toShoppingArray(shoppingData), [shoppingData]);
+  const safeMeals = Array.isArray(meals) ? meals : [];
+  const safeShopping = Array.isArray(shopping) ? shopping : [];
 
   const mealGrid = useMemo(() => {
-    const grid: Record<string, typeof meals> = {};
-    for (const m of meals) {
+    const grid: Record<string, MealPlan[]> = {};
+    for (const m of safeMeals) {
       const key = `${m.dayOfWeek}-${m.mealType}`;
       if (!grid[key]) grid[key] = [];
       grid[key].push(m);
     }
     return grid;
-  }, [meals]);
+  }, [safeMeals]);
 
   const invalidateMeals = () => queryClient.invalidateQueries({ queryKey: getListMealsQueryKey({ weekStart }) });
   const invalidateShopping = () => queryClient.invalidateQueries({ queryKey: getListShoppingQueryKey({ weekStart }) });
@@ -138,13 +163,13 @@ export default function MealsPage() {
     e.preventDefault();
     if (!shoppingInput.trim()) return;
     createShoppingItem.mutate(
-      { weekStart, name: shoppingInput.trim() },
+      { data: { weekStart, name: shoppingInput.trim() } },
       { onSuccess: () => { setShoppingInput(""); invalidateShopping(); } }
     );
   };
 
   const weekLabel = `${format(baseDate, "MMM d")} – ${format(addDays(baseDate, 6), "MMM d, yyyy")}`;
-  const checkedCount = shopping.filter((i) => i.checked).length;
+  const checkedCount = safeShopping.filter((i) => i.checked).length;
 
   return (
     <div className="space-y-8">
@@ -239,9 +264,9 @@ export default function MealsPage() {
         <div className="flex items-center gap-3 mb-4">
           <ShoppingCart className="w-5 h-5 text-primary" />
           <h2 className="text-lg font-semibold text-foreground">Shopping List</h2>
-          {shopping.length > 0 && (
+          {safeShopping.length > 0 && (
             <span className="ml-auto text-sm text-muted-foreground">
-              {checkedCount}/{shopping.length} done
+              {checkedCount}/{safeShopping.length} done
             </span>
           )}
         </div>
@@ -262,14 +287,14 @@ export default function MealsPage() {
           </button>
         </form>
 
-        {shopping.length === 0 ? (
+        {safeShopping.length === 0 ? (
           <p className="text-sm text-muted-foreground text-center py-4">No items yet — add groceries above.</p>
         ) : (
           <ul className="space-y-1.5">
-            {shopping.map((item) => (
+            {safeShopping.map((item) => (
               <li key={item.id} className="flex items-center gap-3 group py-1">
                 <button
-                  onClick={() => toggleShoppingItem.mutate({ id: item.id, checked: !item.checked }, { onSuccess: invalidateShopping })}
+                  onClick={() => toggleShoppingItem.mutate({ id: item.id, data: { checked: !item.checked } }, { onSuccess: invalidateShopping })}
                   className={`w-5 h-5 rounded-md border-2 flex items-center justify-center shrink-0 transition-colors ${
                     item.checked
                       ? "bg-primary border-primary text-primary-foreground"

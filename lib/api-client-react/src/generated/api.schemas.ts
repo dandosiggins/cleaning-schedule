@@ -94,10 +94,6 @@ export interface ScheduleStats {
   completedThisMonth: number;
 }
 
-export type ListCompletionsParams = {
-limit?: number;
-};
-
 export interface Member {
   id: number;
   name: string;
@@ -108,7 +104,14 @@ export interface CreateMemberInput {
   name: string;
 }
 
-export type MealType = 'breakfast' | 'lunch' | 'dinner';
+export type MealType = typeof MealType[keyof typeof MealType];
+
+
+export const MealType = {
+  breakfast: 'breakfast',
+  lunch: 'lunch',
+  dinner: 'dinner',
+} as const;
 
 export interface MealPlan {
   id: number;
@@ -141,5 +144,25 @@ export interface CreateShoppingItemInput {
   name: string;
 }
 
-export type ListMealsParams = { weekStart: string };
-export type ListShoppingParams = { weekStart: string };
+export interface ToggleShoppingItemInput {
+  checked: boolean;
+}
+
+export type ListCompletionsParams = {
+limit?: number;
+};
+
+export type ListMealsParams = {
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+weekStart: string;
+};
+
+export type ListShoppingParams = {
+/**
+ * @pattern ^\d{4}-\d{2}-\d{2}$
+ */
+weekStart: string;
+};
+

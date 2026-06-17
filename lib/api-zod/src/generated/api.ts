@@ -47,7 +47,7 @@ export const CreateTaskBody = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "assignedMemberId": zod.number().nullish(),
+  "assignedMemberId": zod.number().nullish()
 })
 
 
@@ -88,7 +88,7 @@ export const UpdateTaskBody = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']).optional(),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "assignedMemberId": zod.number().nullish(),
+  "assignedMemberId": zod.number().nullish()
 })
 
 export const UpdateTaskResponse = zod.object({
@@ -203,6 +203,105 @@ export const ListCompletionsResponse = zod.array(ListCompletionsResponseItem)
 
 
 /**
+ * @summary List meal plans for a week
+ */
+export const listMealsQueryWeekStartRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListMealsQueryParams = zod.object({
+  "weekStart": zod.coerce.string().regex(listMealsQueryWeekStartRegExp)
+})
+
+export const ListMealsResponseItem = zod.object({
+  "id": zod.number(),
+  "weekStart": zod.string(),
+  "dayOfWeek": zod.number(),
+  "mealType": zod.enum(['breakfast', 'lunch', 'dinner']),
+  "title": zod.string(),
+  "notes": zod.string().nullish(),
+  "createdAt": zod.coerce.date()
+})
+export const ListMealsResponse = zod.array(ListMealsResponseItem)
+
+
+/**
+ * @summary Create a meal plan
+ */
+export const CreateMealBody = zod.object({
+  "weekStart": zod.string(),
+  "dayOfWeek": zod.number(),
+  "mealType": zod.enum(['breakfast', 'lunch', 'dinner']),
+  "title": zod.string(),
+  "notes": zod.string().nullish()
+})
+
+
+/**
+ * @summary Delete a meal plan
+ */
+export const DeleteMealPlanParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
+ * @summary List shopping items for a week
+ */
+export const listShoppingQueryWeekStartRegExp = new RegExp('^\\d{4}-\\d{2}-\\d{2}$');
+
+
+export const ListShoppingQueryParams = zod.object({
+  "weekStart": zod.coerce.string().regex(listShoppingQueryWeekStartRegExp)
+})
+
+export const ListShoppingResponseItem = zod.object({
+  "id": zod.number(),
+  "weekStart": zod.string(),
+  "name": zod.string(),
+  "checked": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+export const ListShoppingResponse = zod.array(ListShoppingResponseItem)
+
+
+/**
+ * @summary Create a shopping item
+ */
+export const CreateShoppingItemBody = zod.object({
+  "weekStart": zod.string(),
+  "name": zod.string()
+})
+
+
+/**
+ * @summary Update shopping item checked state
+ */
+export const ToggleShoppingItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+export const ToggleShoppingItemBody = zod.object({
+  "checked": zod.boolean()
+})
+
+export const ToggleShoppingItemResponse = zod.object({
+  "id": zod.number(),
+  "weekStart": zod.string(),
+  "name": zod.string(),
+  "checked": zod.boolean(),
+  "createdAt": zod.coerce.date()
+})
+
+
+/**
+ * @summary Delete a shopping item
+ */
+export const DeleteShoppingItemParams = zod.object({
+  "id": zod.coerce.number()
+})
+
+
+/**
  * @summary List all members
  */
 export const ListMembersResponseItem = zod.object({
@@ -212,18 +311,14 @@ export const ListMembersResponseItem = zod.object({
 })
 export const ListMembersResponse = zod.array(ListMembersResponseItem)
 
+
 /**
  * @summary Create a member
  */
 export const CreateMemberBody = zod.object({
-  "name": zod.string().min(1)
+  "name": zod.string()
 })
 
-export const CreateMemberResponse = zod.object({
-  "id": zod.number(),
-  "name": zod.string(),
-  "createdAt": zod.coerce.date()
-})
 
 /**
  * @summary Delete a member
@@ -231,3 +326,5 @@ export const CreateMemberResponse = zod.object({
 export const DeleteMemberParams = zod.object({
   "id": zod.coerce.number()
 })
+
+

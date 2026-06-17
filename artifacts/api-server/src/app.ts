@@ -1,6 +1,8 @@
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
+import fs from "node:fs";
+import path from "node:path";
 import router from "./routes";
 import { logger } from "./lib/logger";
 
@@ -30,5 +32,16 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/api", router);
+
+const staticDir =
+  process.env["STATIC_DIR"] ??
+  path.resolve(process.cwd(), "artifacts/cleaning-schedule/dist/public");
+
+if (fs.existsSync(staticDir)) {
+  app.use(express.static(staticDir));
+  app.get(/.*/, (_req, res) => {
+    res.sendFile(path.join(staticDir, "index.html"));
+  });
+}
 
 export default app;

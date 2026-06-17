@@ -10,10 +10,10 @@ import { Textarea } from "@/components/ui/textarea";
 import {
   useCreateTask, useUpdateTask, useListTasks, useListMembers,
   getListTasksQueryKey, getListTasksDueTodayQueryKey, getListUpcomingTasksQueryKey,
-  getGetStatsQueryKey, CleaningTask, useGetTask, getGetTaskQueryKey,
+  getGetStatsQueryKey, CleaningTask, CreateTaskInput, Member, useGetTask, getGetTaskQueryKey,
 } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { User } from "lucide-react";
 
 const taskSchema = z.object({
@@ -26,6 +26,59 @@ const taskSchema = z.object({
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
+type TaskFrequency = CreateTaskInput["frequency"];
+
+function toTaskArray(data: unknown): CleaningTask[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { tasks?: unknown; data?: unknown };
+    if (Array.isArray(value.tasks)) return value.tasks as CleaningTask[];
+    if (Array.isArray(value.data)) return value.data as CleaningTask[];
+  }
+  return [];
+}
+
+function toMemberArray(data: unknown): Member[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { members?: unknown; people?: unknown; data?: unknown };
+    if (Array.isArray(value.members)) return value.members as Member[];
+    if (Array.isArray(value.people)) return value.people as Member[];
+    if (Array.isArray(value.data)) return value.data as Member[];
+  }
+  return [];
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error && error.message) return error.message;
+  return "Unable to save the task. Please try again.";
+}
+
+function normalizeFrequency(frequency: string): TaskFrequency {
+  const normalized = frequency.toLowerCase();
+  if (
+    normalized === "daily" ||
+    normalized === "weekly" ||
+    normalized === "monthly" ||
+    normalized === "custom"
+  ) {
+    return normalized;
+  }
+  return "weekly";
+}
+
+function toTaskPayload(values: TaskFormValues): CreateTaskInput {
+  const frequency = normalizeFrequency(values.frequency);
+
+  return {
+    name: values.name.trim(),
+    room: values.room.trim(),
+    frequency,
+    customIntervalDays: frequency === "custom" ? values.customIntervalDays ?? null : null,
+    notes: values.notes?.trim() ? values.notes.trim() : null,
+    assignedMemberId: values.assignedMemberId ?? null,
+  };
+}
 
 export function TaskFormDialog({
   open,
@@ -39,15 +92,20 @@ export function TaskFormDialog({
   const queryClient = useQueryClient();
   const createTask = useCreateTask();
   const updateTask = useUpdateTask();
-  const { data: allTasks } = useListTasks();
-  const { data: members } = useListMembers();
+  const { data: allTasksData } = useListTasks();
+  const { data: membersData } = useListMembers();
+  const allTasks = useMemo(() => toTaskArray(allTasksData), [allTasksData]);
+  const members = useMemo(() => toMemberArray(membersData), [membersData]);
+  const taskList = Array.isArray(allTasks) ? allTasks : [];
+  const memberList = Array.isArray(members) ? members : [];
 
   const { data: fetchedTask } = useGetTask(task?.id || 0, { query: { enabled: !!task?.id, queryKey: getGetTaskQueryKey(task?.id || 0) } });
   const activeTask = fetchedTask || task;
 
   const [isNewRoom, setIsNewRoom] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
-  const existingRooms = Array.from(new Set((allTasks || []).map(t => t.room))).filter(Boolean);
+  const existingRooms = Array.from(new Set(taskList.map((t) => t.room))).filter(Boolean);
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema),
@@ -87,6 +145,7 @@ export function TaskFormDialog({
       });
       setIsNewRoom(false);
     }
+    setSubmitError(null);
   }, [open, activeTask, form, existingRooms.length]);
 
   const invalidate = () => {
@@ -97,10 +156,35 @@ export function TaskFormDialog({
   };
 
   const onSubmit = (values: TaskFormValues) => {
+    setSubmitError(null);
+    const payload = toTaskPayload(values);
+
     if (activeTask) {
-      updateTask.mutate({ id: activeTask.id, data: values }, { onSuccess: () => { invalidate(); onOpenChange(false); } });
+      updateTask.mutate(
+        { id: activeTask.id, data: payload },
+        {
+          onSuccess: () => {
+            invalidate();
+            onOpenChange(false);
+          },
+          onError: (error) => {
+            setSubmitError(getErrorMessage(error));
+          },
+        },
+      );
     } else {
-      createTask.mutate({ data: values }, { onSuccess: () => { invalidate(); onOpenChange(false); } });
+      createTask.mutate(
+        { data: payload },
+        {
+          onSuccess: () => {
+            invalidate();
+            onOpenChange(false);
+          },
+          onError: (error) => {
+            setSubmitError(getErrorMessage(error));
+          },
+        },
+      );
     }
   };
 
@@ -116,6 +200,12 @@ export function TaskFormDialog({
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 mt-2">
+            {submitError && (
+              <div className="rounded-lg border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive">
+                {submitError}
+              </div>
+            )}
+
             <FormField
               control={form.control}
               name="name"
@@ -211,7 +301,7 @@ export function TaskFormDialog({
             </div>
 
             {/* Assignee picker */}
-            {members && members.length > 0 && (
+            {memberList.length > 0 && (
               <FormField
                 control={form.control}
                 name="assignedMemberId"
@@ -232,7 +322,7 @@ export function TaskFormDialog({
                       </FormControl>
                       <SelectContent className="rounded-xl">
                         <SelectItem value="unassigned" className="rounded-lg cursor-pointer text-muted-foreground">Unassigned</SelectItem>
-                        {members.map(m => (
+                        {memberList.map(m => (
                           <SelectItem key={m.id} value={String(m.id)} className="rounded-lg cursor-pointer">{m.name}</SelectItem>
                         ))}
                       </SelectContent>

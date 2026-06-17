@@ -1,4 +1,4 @@
-import { useListTasks, useListUpcomingTasks } from "@workspace/api-client-react";
+import { CleaningTask, useListTasks, useListUpcomingTasks } from "@workspace/api-client-react";
 import { TaskCard } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -6,21 +6,34 @@ import { Plus, LayoutGrid, Clock } from "lucide-react";
 import { useMemo, useState } from "react";
 import { TaskFormDialog } from "@/components/task-form-dialog";
 
+function toTaskArray(data: unknown): CleaningTask[] {
+  if (Array.isArray(data)) return data;
+  if (data && typeof data === "object") {
+    const value = data as { tasks?: unknown; data?: unknown };
+    if (Array.isArray(value.tasks)) return value.tasks as CleaningTask[];
+    if (Array.isArray(value.data)) return value.data as CleaningTask[];
+  }
+  return [];
+}
+
 export default function SchedulePage() {
-  const { data: tasks, isLoading } = useListTasks();
-  const { data: upcomingTasks, isLoading: isUpcomingLoading } = useListUpcomingTasks();
+  const { data: tasksData, isLoading } = useListTasks();
+  const { data: upcomingTasksData, isLoading: isUpcomingLoading } = useListUpcomingTasks();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const tasks = useMemo(() => toTaskArray(tasksData), [tasksData]);
+  const upcomingTasks = useMemo(() => toTaskArray(upcomingTasksData), [upcomingTasksData]);
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeUpcomingTasks = Array.isArray(upcomingTasks) ? upcomingTasks : [];
 
   const groupedTasks = useMemo(() => {
-    if (!tasks) return {};
-    return tasks.reduce((acc, task) => {
+    return safeTasks.reduce((acc, task) => {
       if (!acc[task.room]) {
         acc[task.room] = [];
       }
       acc[task.room].push(task);
       return acc;
-    }, {} as Record<string, typeof tasks>);
-  }, [tasks]);
+    }, {} as Record<string, CleaningTask[]>);
+  }, [safeTasks]);
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -46,13 +59,13 @@ export default function SchedulePage() {
             <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-32 w-full rounded-2xl" />
           </div>
-        ) : upcomingTasks?.length === 0 ? (
+        ) : safeUpcomingTasks.length === 0 ? (
           <div className="bg-card/30 border border-border/40 rounded-2xl p-6 text-center text-muted-foreground">
             No tasks due in the next 7 days.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-            {upcomingTasks?.map((task) => (
+            {safeUpcomingTasks.map((task) => (
               <TaskCard key={`upcoming-${task.id}`} task={task} />
             ))}
           </div>
@@ -69,7 +82,7 @@ export default function SchedulePage() {
             <Skeleton className="h-32 w-full rounded-2xl" />
             <Skeleton className="h-32 w-full rounded-2xl" />
           </div>
-        ) : tasks?.length === 0 ? (
+        ) : safeTasks.length === 0 ? (
           <div className="text-center py-24 px-4 border-2 border-dashed border-border rounded-3xl bg-card/40 shadow-sm mt-12">
             <div className="w-20 h-20 bg-secondary rounded-3xl flex items-center justify-center mx-auto mb-6">
               <LayoutGrid className="w-10 h-10 text-secondary-foreground" />

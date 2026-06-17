@@ -56,7 +56,7 @@ function AddMealModal({ visible, dayOfWeek, mealType, weekStart, onClose }: AddM
   const handleSubmit = () => {
     if (!title.trim()) return;
     createMeal.mutate(
-      { weekStart, dayOfWeek, mealType, title: title.trim(), notes: notes.trim() || null },
+      { data: { weekStart, dayOfWeek, mealType, title: title.trim(), notes: notes.trim() || null } },
       {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: getListMealsQueryKey({ weekStart }) });
@@ -153,7 +153,7 @@ export default function MealsScreen() {
   const handleAddShopping = () => {
     if (!shoppingInput.trim()) return;
     createShoppingItem.mutate(
-      { weekStart, name: shoppingInput.trim() },
+      { data: { weekStart, name: shoppingInput.trim() } },
       { onSuccess: () => { setShoppingInput(""); invalidateShopping(); } }
     );
   };
@@ -308,7 +308,7 @@ export default function MealsScreen() {
                     ]}
                   >
                     <Pressable
-                      onPress={() => toggleShopping.mutate({ id: item.id, checked: !item.checked }, { onSuccess: invalidateShopping })}
+                      onPress={() => toggleShopping.mutate({ id: item.id, data: { checked: !item.checked } }, { onSuccess: invalidateShopping })}
                       style={[
                         styles.checkbox,
                         {

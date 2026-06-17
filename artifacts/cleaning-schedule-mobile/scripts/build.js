@@ -67,10 +67,7 @@ function getDeploymentDomain() {
     return stripProtocol(process.env.EXPO_PUBLIC_DOMAIN);
   }
 
-  console.error(
-    "ERROR: No deployment domain found. Set REPLIT_INTERNAL_APP_DOMAIN, REPLIT_DEV_DOMAIN, or EXPO_PUBLIC_DOMAIN",
-  );
-  process.exit(1);
+  return `localhost:${process.env.PORT || "3000"}`;
 }
 
 function prepareDirectories(timestamp) {
@@ -138,6 +135,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
   console.log(`Setting EXPO_PUBLIC_DOMAIN=${expoPublicDomain}`);
   const env = {
     ...process.env,
+    EXPO_OFFLINE: "1",
     EXPO_PUBLIC_DOMAIN: expoPublicDomain,
     EXPO_PUBLIC_REPL_ID: expoPublicReplId,
   };
@@ -147,7 +145,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
   }
 
   metroProcess = spawn(
-    "pnpm",
+    process.platform === "win32" ? "pnpm.cmd" : "pnpm",
     [
       "exec",
       "expo",
@@ -161,6 +159,7 @@ async function startMetro(expoPublicDomain, expoPublicReplId) {
       detached: false,
       cwd: projectRoot,
       env,
+      shell: process.platform === "win32",
     },
   );
 
@@ -512,7 +511,9 @@ async function main() {
 
   const domain = getDeploymentDomain();
   const expoPublicReplId = getExpoPublicReplId();
-  const baseUrl = `https://${domain}`;
+  const baseUrl = domain.startsWith("localhost")
+    ? `http://${domain}`
+    : `https://${domain}`;
   const timestamp = `${Date.now()}-${process.pid}`;
 
   prepareDirectories(timestamp);

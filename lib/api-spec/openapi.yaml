@@ -14,6 +14,12 @@ tags:
     description: Cleaning task operations
   - name: completions
     description: Task completion operations
+  - name: meals
+    description: Meal planning operations
+  - name: shopping
+    description: Shopping list operations
+  - name: members
+    description: Household member operations
 paths:
   /healthz:
     get:
@@ -212,6 +218,184 @@ paths:
                 items:
                   $ref: "#/components/schemas/TaskCompletion"
 
+  /meals:
+    get:
+      operationId: listMeals
+      tags: [meals]
+      summary: List meal plans for a week
+      parameters:
+        - name: weekStart
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+      responses:
+        "200":
+          description: List of meal plans
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MealPlan"
+    post:
+      operationId: createMeal
+      tags: [meals]
+      summary: Create a meal plan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMealInput"
+      responses:
+        "201":
+          description: Created meal plan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MealPlan"
+
+  /meals/{id}:
+    delete:
+      operationId: deleteMealPlan
+      tags: [meals]
+      summary: Delete a meal plan
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /shopping:
+    get:
+      operationId: listShopping
+      tags: [shopping]
+      summary: List shopping items for a week
+      parameters:
+        - name: weekStart
+          in: query
+          required: true
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2}$'
+      responses:
+        "200":
+          description: List of shopping items
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/ShoppingItem"
+    post:
+      operationId: createShoppingItem
+      tags: [shopping]
+      summary: Create a shopping item
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateShoppingItemInput"
+      responses:
+        "201":
+          description: Created shopping item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingItem"
+
+  /shopping/{id}:
+    patch:
+      operationId: toggleShoppingItem
+      tags: [shopping]
+      summary: Update shopping item checked state
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ToggleShoppingItemInput"
+      responses:
+        "200":
+          description: Updated shopping item
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ShoppingItem"
+    delete:
+      operationId: deleteShoppingItem
+      tags: [shopping]
+      summary: Delete a shopping item
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
+  /members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: List all members
+      responses:
+        "200":
+          description: List of household members
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+    post:
+      operationId: createMember
+      tags: [members]
+      summary: Create a member
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMemberInput"
+      responses:
+        "201":
+          description: Created member
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Member"
+
+  /members/{id}:
+    delete:
+      operationId: deleteMember
+      tags: [members]
+      summary: Delete a member
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "204":
+          description: Deleted
+
 components:
   schemas:
     HealthStatus:
@@ -238,6 +422,12 @@ components:
           type: integer
           nullable: true
         notes:
+          type: string
+          nullable: true
+        assignedMemberId:
+          type: integer
+          nullable: true
+        assignedMemberName:
           type: string
           nullable: true
         lastCompletedAt:
@@ -281,6 +471,9 @@ components:
         notes:
           type: string
           nullable: true
+        assignedMemberId:
+          type: integer
+          nullable: true
       required:
         - name
         - room
@@ -301,6 +494,9 @@ components:
           nullable: true
         notes:
           type: string
+          nullable: true
+        assignedMemberId:
+          type: integer
           nullable: true
 
     TaskCompletion:
@@ -353,3 +549,117 @@ components:
         - overdueCount
         - completedThisWeek
         - completedThisMonth
+
+    Member:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - name
+        - createdAt
+
+    CreateMemberInput:
+      type: object
+      properties:
+        name:
+          type: string
+      required:
+        - name
+
+    MealType:
+      type: string
+      enum: [breakfast, lunch, dinner]
+
+    MealPlan:
+      type: object
+      properties:
+        id:
+          type: integer
+        weekStart:
+          type: string
+        dayOfWeek:
+          type: integer
+        mealType:
+          $ref: "#/components/schemas/MealType"
+        title:
+          type: string
+        notes:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - weekStart
+        - dayOfWeek
+        - mealType
+        - title
+        - createdAt
+
+    CreateMealInput:
+      type: object
+      properties:
+        weekStart:
+          type: string
+        dayOfWeek:
+          type: integer
+        mealType:
+          $ref: "#/components/schemas/MealType"
+        title:
+          type: string
+        notes:
+          type: string
+          nullable: true
+      required:
+        - weekStart
+        - dayOfWeek
+        - mealType
+        - title
+
+    ShoppingItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        weekStart:
+          type: string
+        name:
+          type: string
+        checked:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+      required:
+        - id
+        - weekStart
+        - name
+        - checked
+        - createdAt
+
+    CreateShoppingItemInput:
+      type: object
+      properties:
+        weekStart:
+          type: string
+        name:
+          type: string
+      required:
+        - weekStart
+        - name
+
+    ToggleShoppingItemInput:
+      type: object
+      properties:
+        checked:
+          type: boolean
+      required:
+        - checked

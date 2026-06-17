@@ -1,6 +1,6 @@
 [build]
 installCommand = "pnpm install --no-frozen-lockfile"
-buildCommand = "pnpm --filter @workspace/api-server build"
+buildCommand = "pnpm --filter @workspace/cleaning-schedule build && pnpm --filter @workspace/api-server build"
 
 [deploy]
 startCommand = "pnpm --filter @workspace/api-server start"
