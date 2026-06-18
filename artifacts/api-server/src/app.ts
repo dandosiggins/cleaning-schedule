@@ -37,6 +37,7 @@ app.use("/api", router);
 const serverDir = path.dirname(fileURLToPath(import.meta.url));
 const staticDirCandidates = [
   process.env["STATIC_DIR"],
+  path.resolve(serverDir, "public"),
   path.resolve(serverDir, "../../../artifacts/cleaning-schedule/dist/public"),
   path.resolve(process.cwd(), "artifacts/cleaning-schedule/dist/public"),
 ].filter((candidate): candidate is string => Boolean(candidate));
