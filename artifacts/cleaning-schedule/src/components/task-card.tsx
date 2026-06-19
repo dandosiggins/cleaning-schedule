@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { Check, Clock, MoreVertical, Trash, Edit3, Calendar, User } from "lucide-react";
+import { AlertCircle, Check, Clock, MoreVertical, Trash, Edit3, Calendar, User } from "lucide-react";
 import { CleaningTask } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,7 +29,8 @@ export function TaskCard({
   };
 
   const handleComplete = () => {
-    completeTask.mutate({ id: task.id }, { onSuccess: invalidate });
+    completeTask.reset();
+    completeTask.mutate({ id: task.id, data: {} }, { onSuccess: invalidate });
   };
 
   const handleDelete = () => {
@@ -39,6 +40,13 @@ export function TaskCard({
   };
 
   const isCompleting = completeTask.isPending;
+  const isCompleted = Boolean(task.lastCompletedAt);
+  const completionError =
+    completeTask.error instanceof Error
+      ? completeTask.error.message
+      : completeTask.error
+        ? "Could not complete task."
+        : null;
 
   return (
     <>
@@ -46,11 +54,16 @@ export function TaskCard({
         <button
           onClick={handleComplete}
           disabled={isCompleting}
+          aria-label={isCompleted ? "Mark task complete again" : "Mark task complete"}
           className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
-            isCompleting ? 'opacity-50 scale-95' : 'hover:bg-primary hover:border-primary text-transparent hover:text-primary-foreground hover:scale-110 active:scale-95'
+            isCompleted
+              ? 'bg-primary border-primary text-primary-foreground'
+              : isCompleting
+                ? 'opacity-50 scale-95'
+                : 'hover:bg-primary hover:border-primary text-transparent hover:text-primary-foreground hover:scale-110 active:scale-95'
           }`}
         >
-          <Check className="w-4 h-4 opacity-0 transition-opacity hover:opacity-100" strokeWidth={3} />
+          <Check className={`w-4 h-4 transition-opacity ${isCompleted ? 'opacity-100' : 'opacity-0 hover:opacity-100'}`} strokeWidth={3} />
         </button>
 
         <div className="flex-1 min-w-0 pt-0.5">
@@ -103,7 +116,19 @@ export function TaskCard({
                 <span>{task.assignedMemberName}</span>
               </div>
             )}
+            {task.lastCompletedAt && (
+              <div className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
+                <Check className="w-3.5 h-3.5" />
+                <span>Completed {format(new Date(task.lastCompletedAt), 'MMM d')}</span>
+              </div>
+            )}
           </div>
+          {completionError && (
+            <div className="mt-3 flex items-center gap-2 text-xs font-medium text-destructive">
+              <AlertCircle className="w-3.5 h-3.5" />
+              <span>{completionError}</span>
+            </div>
+          )}
         </div>
       </div>
 

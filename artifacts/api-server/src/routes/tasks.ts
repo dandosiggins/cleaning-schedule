@@ -249,36 +249,44 @@ router.delete("/tasks/:id", async (req, res) => {
 
 // POST /tasks/:id/complete
 router.post("/tasks/:id/complete", async (req, res) => {
-  const paramsParsed = CompleteTaskParams.safeParse({ id: Number(req.params.id) });
-  if (!paramsParsed.success) return res.status(400).json({ error: "Invalid id" });
+  try {
+    const paramsParsed = CompleteTaskParams.safeParse({ id: Number(req.params.id) });
+    if (!paramsParsed.success) return res.status(400).json({ error: "Invalid id" });
 
-  const bodyParsed = CompleteTaskBody.safeParse(req.body ?? {});
-  const notes = bodyParsed.success ? (bodyParsed.data.notes ?? null) : null;
+    const bodyParsed = CompleteTaskBody.safeParse(req.body ?? {});
+    if (!bodyParsed.success) {
+      return res.status(400).json({ error: "Invalid input", details: bodyParsed.error });
+    }
+    const notes = bodyParsed.data.notes ?? null;
 
-  const [task] = await db.select().from(cleaningTasksTable).where(eq(cleaningTasksTable.id, paramsParsed.data.id));
-  if (!task) return res.status(404).json({ error: "Task not found" });
+    const [task] = await db.select().from(cleaningTasksTable).where(eq(cleaningTasksTable.id, paramsParsed.data.id));
+    if (!task) return res.status(404).json({ error: "Task not found" });
 
-  const now = new Date();
-  const nextDueAt = computeNextDueAt(task.frequency, task.customIntervalDays, now);
+    const now = new Date();
+    const nextDueAt = computeNextDueAt(task.frequency, task.customIntervalDays, now);
 
-  await db.update(cleaningTasksTable)
-    .set({ lastCompletedAt: now, nextDueAt, updatedAt: now })
-    .where(eq(cleaningTasksTable.id, task.id));
+    await db.update(cleaningTasksTable)
+      .set({ lastCompletedAt: now, nextDueAt, updatedAt: now })
+      .where(eq(cleaningTasksTable.id, task.id));
 
-  const [completion] = await db.insert(taskCompletionsTable).values({
-    taskId: task.id,
-    notes,
-    completedAt: now,
-  }).returning();
+    const [completion] = await db.insert(taskCompletionsTable).values({
+      taskId: task.id,
+      notes,
+      completedAt: now,
+    }).returning();
 
-  return res.status(201).json({
-    id: completion.id,
-    taskId: task.id,
-    taskName: task.name,
-    room: task.room,
-    completedAt: completion.completedAt.toISOString(),
-    notes: completion.notes ?? null,
-  });
+    return res.status(201).json({
+      id: completion.id,
+      taskId: task.id,
+      taskName: task.name,
+      room: task.room,
+      completedAt: completion.completedAt.toISOString(),
+      notes: completion.notes ?? null,
+    });
+  } catch (err) {
+    req.log?.error({ err, taskId: req.params.id }, "Failed to complete task");
+    return res.status(500).json({ error: "Failed to complete task." });
+  }
 });
 
 // GET /completions
