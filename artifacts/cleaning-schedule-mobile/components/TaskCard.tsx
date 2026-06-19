@@ -43,7 +43,9 @@ function dueDateLabel(task: CleaningTask): string | null {
 function isTaskChecked(task: CleaningTask): boolean {
   if (!task.lastCompletedAt) return false;
   if (!task.nextDueAt) return true;
-  return parseISO(task.nextDueAt) > new Date();
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return parseISO(task.nextDueAt) > endOfToday;
 }
 
 interface TaskCardProps {

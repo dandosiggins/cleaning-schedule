@@ -20,7 +20,9 @@ function formatFrequency(task: CleaningTask): string {
 function isTaskChecked(task: CleaningTask): boolean {
   if (!task.lastCompletedAt) return false;
   if (!task.nextDueAt) return true;
-  return new Date(task.nextDueAt) > new Date();
+  const endOfToday = new Date();
+  endOfToday.setHours(23, 59, 59, 999);
+  return new Date(task.nextDueAt) > endOfToday;
 }
 
 export function TaskCard({
