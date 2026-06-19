@@ -9,6 +9,14 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { TaskFormDialog } from "./task-form-dialog";
 
+function formatFrequency(task: CleaningTask): string {
+  if (task.frequency === "once") return "One time";
+  if (task.frequency === "custom" && task.customIntervalDays) {
+    return `Custom (${task.customIntervalDays}d)`;
+  }
+  return task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1);
+}
+
 export function TaskCard({
   task,
   showActions = true,
@@ -102,7 +110,7 @@ export function TaskCard({
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 mt-3">
             <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted/50 px-2 py-1 rounded-md">
               <Clock className="w-3.5 h-3.5" />
-              <span className="capitalize">{task.frequency}{task.frequency === 'custom' && task.customIntervalDays ? ` (${task.customIntervalDays}d)` : ''}</span>
+              <span>{formatFrequency(task)}</span>
             </div>
             {task.nextDueAt && (
               <div className={`flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-md ${task.isOverdue ? 'text-destructive bg-destructive/10' : 'text-primary bg-primary/10'}`}>

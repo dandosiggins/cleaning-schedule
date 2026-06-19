@@ -10,6 +10,7 @@ export type CleaningTaskFrequency = typeof CleaningTaskFrequency[keyof typeof Cl
 
 
 export const CleaningTaskFrequency = {
+  once: 'once',
   daily: 'daily',
   weekly: 'weekly',
   monthly: 'monthly',

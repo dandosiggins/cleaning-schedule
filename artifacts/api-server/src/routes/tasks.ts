@@ -14,9 +14,11 @@ import {
 
 const router = Router();
 
-function computeNextDueAt(frequency: string, customIntervalDays: number | null | undefined, fromDate: Date = new Date()): Date {
+function computeNextDueAt(frequency: string, customIntervalDays: number | null | undefined, fromDate: Date = new Date()): Date | null {
   const next = new Date(fromDate);
-  if (frequency === "daily") {
+  if (frequency === "once") {
+    return null;
+  } else if (frequency === "daily") {
     next.setDate(next.getDate() + 1);
   } else if (frequency === "weekly") {
     next.setDate(next.getDate() + 7);

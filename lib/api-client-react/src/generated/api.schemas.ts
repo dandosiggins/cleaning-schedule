@@ -13,6 +13,7 @@ export type CleaningTaskFrequency = typeof CleaningTaskFrequency[keyof typeof Cl
 
 
 export const CleaningTaskFrequency = {
+  once: 'once',
   daily: 'daily',
   weekly: 'weekly',
   monthly: 'monthly',
@@ -39,6 +40,7 @@ export type CreateTaskInputFrequency = typeof CreateTaskInputFrequency[keyof typ
 
 
 export const CreateTaskInputFrequency = {
+  once: 'once',
   daily: 'daily',
   weekly: 'weekly',
   monthly: 'monthly',
@@ -59,6 +61,7 @@ export type UpdateTaskInputFrequency = typeof UpdateTaskInputFrequency[keyof typ
 
 
 export const UpdateTaskInputFrequency = {
+  once: 'once',
   daily: 'daily',
   weekly: 'weekly',
   monthly: 'monthly',

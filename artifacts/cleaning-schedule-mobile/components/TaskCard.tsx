@@ -25,6 +25,9 @@ import { AddTaskSheet } from "@/components/AddTaskSheet";
 import { format, parseISO } from "date-fns";
 
 function frequencyLabel(task: CleaningTask): string {
+  if (task.frequency === "once") {
+    return "One time";
+  }
   if (task.frequency === "custom" && task.customIntervalDays) {
     return `Every ${task.customIntervalDays}d`;
   }
@@ -58,7 +61,7 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
 
   const handleComplete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    completeTask.mutate({ id: task.id }, { onSuccess: invalidate });
+    completeTask.mutate({ id: task.id, data: {} }, { onSuccess: invalidate });
   };
 
   const handleMenu = () => {

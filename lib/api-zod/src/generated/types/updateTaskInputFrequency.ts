@@ -10,6 +10,7 @@ export type UpdateTaskInputFrequency = typeof UpdateTaskInputFrequency[keyof typ
 
 
 export const UpdateTaskInputFrequency = {
+  once: 'once',
   daily: 'daily',
   weekly: 'weekly',
   monthly: 'monthly',

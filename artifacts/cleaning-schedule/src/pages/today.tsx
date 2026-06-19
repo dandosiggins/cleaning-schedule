@@ -17,6 +17,14 @@ function toTaskArray(data: unknown): CleaningTask[] {
   return [];
 }
 
+function formatFrequency(task: CleaningTask): string {
+  if (task.frequency === "once") return "One time";
+  if (task.frequency === "custom" && task.customIntervalDays) {
+    return `Custom (${task.customIntervalDays}d)`;
+  }
+  return task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1);
+}
+
 export default function TodayPage() {
   const { data: tasksData, isLoading: isLoadingTasks } = useListTasksDueToday();
   const { data: stats, isLoading: isLoadingStats } = useGetStats();
@@ -143,7 +151,7 @@ export default function TodayPage() {
                   <CardContent className="p-4 flex items-center justify-between gap-4">
                     <div className="min-w-0">
                       <p className="font-semibold text-foreground truncate">{task.name}</p>
-                      <p className="text-sm text-muted-foreground">{task.room} · {task.frequency}</p>
+                      <p className="text-sm text-muted-foreground">{task.room} · {formatFrequency(task)}</p>
                     </div>
                     {task.nextDueAt && (
                       <span className="shrink-0 text-sm font-medium text-muted-foreground bg-muted px-2.5 py-1 rounded-lg">

@@ -19,7 +19,7 @@ import { User } from "lucide-react";
 const taskSchema = z.object({
   name: z.string().min(1, "Name is required"),
   room: z.string().min(1, "Room is required"),
-  frequency: z.enum(["daily", "weekly", "monthly", "custom"]),
+  frequency: z.enum(["once", "daily", "weekly", "monthly", "custom"]),
   customIntervalDays: z.coerce.number().min(1).nullable().optional(),
   notes: z.string().nullable().optional(),
   assignedMemberId: z.number().nullable().optional(),
@@ -61,6 +61,7 @@ function normalizeFrequency(frequency: string): TaskFrequency {
     normalized === "daily" ||
     normalized === "weekly" ||
     normalized === "monthly" ||
+    normalized === "once" ||
     normalized === "custom"
   ) {
     return normalized;
@@ -297,6 +298,7 @@ export function TaskFormDialog({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent className="rounded-xl">
+                        <SelectItem value="once" className="rounded-lg cursor-pointer">One time</SelectItem>
                         <SelectItem value="daily" className="rounded-lg cursor-pointer">Daily</SelectItem>
                         <SelectItem value="weekly" className="rounded-lg cursor-pointer">Weekly</SelectItem>
                         <SelectItem value="monthly" className="rounded-lg cursor-pointer">Monthly</SelectItem>

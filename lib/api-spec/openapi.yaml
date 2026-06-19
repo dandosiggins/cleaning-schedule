@@ -417,7 +417,7 @@ components:
           type: string
         frequency:
           type: string
-          enum: [daily, weekly, monthly, custom]
+          enum: [once, daily, weekly, monthly, custom]
         customIntervalDays:
           type: integer
           nullable: true
@@ -464,7 +464,7 @@ components:
           type: string
         frequency:
           type: string
-          enum: [daily, weekly, monthly, custom]
+          enum: [once, daily, weekly, monthly, custom]
         customIntervalDays:
           type: integer
           nullable: true
@@ -492,7 +492,7 @@ components:
           type: string
         frequency:
           type: string
-          enum: [daily, weekly, monthly, custom]
+          enum: [once, daily, weekly, monthly, custom]
         customIntervalDays:
           type: integer
           nullable: true

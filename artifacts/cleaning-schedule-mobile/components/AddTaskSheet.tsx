@@ -27,7 +27,7 @@ import {
 import { useColors } from "@/hooks/useColors";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-const FREQUENCIES = ["daily", "weekly", "monthly", "custom"] as const;
+const FREQUENCIES = ["once", "daily", "weekly", "monthly", "custom"] as const;
 type Frequency = (typeof FREQUENCIES)[number];
 
 interface Props {
@@ -196,7 +196,7 @@ export function AddTaskSheet({ visible, onClose, task }: Props) {
               {FREQUENCIES.map((f) => (
                 <Pressable key={f} onPress={() => setFrequency(f)} style={[styles.chip, { backgroundColor: frequency === f ? colors.primary : colors.muted, borderRadius: colors.radius - 4 }]}>
                   <Text style={[styles.chipText, { color: frequency === f ? colors.primaryForeground : colors.mutedForeground }]}>
-                    {f.charAt(0).toUpperCase() + f.slice(1)}
+                    {f === "once" ? "One time" : f.charAt(0).toUpperCase() + f.slice(1)}
                   </Text>
                 </Pressable>
               ))}
