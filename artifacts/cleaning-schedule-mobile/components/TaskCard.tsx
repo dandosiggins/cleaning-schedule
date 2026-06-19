@@ -14,6 +14,7 @@ import {
   CleaningTask,
   useCompleteTask,
   useDeleteTask,
+  useUncompleteTask,
   getListTasksDueTodayQueryKey,
   getListTasksQueryKey,
   getGetStatsQueryKey,
@@ -39,6 +40,12 @@ function dueDateLabel(task: CleaningTask): string | null {
   return format(parseISO(task.nextDueAt), "MMM d");
 }
 
+function isTaskChecked(task: CleaningTask): boolean {
+  if (!task.lastCompletedAt) return false;
+  if (!task.nextDueAt) return true;
+  return parseISO(task.nextDueAt) > new Date();
+}
+
 interface TaskCardProps {
   task: CleaningTask;
   showComplete?: boolean;
@@ -48,6 +55,7 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
   const colors = useColors();
   const queryClient = useQueryClient();
   const completeTask = useCompleteTask();
+  const uncompleteTask = useUncompleteTask();
   const deleteTask = useDeleteTask();
   const [editOpen, setEditOpen] = useState(false);
 
@@ -61,7 +69,11 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
 
   const handleComplete = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    completeTask.mutate({ id: task.id, data: {} }, { onSuccess: invalidate });
+    if (isTaskChecked(task)) {
+      uncompleteTask.mutate({ id: task.id }, { onSuccess: invalidate });
+    } else {
+      completeTask.mutate({ id: task.id, data: {} }, { onSuccess: invalidate });
+    }
   };
 
   const handleMenu = () => {
@@ -82,6 +94,8 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
   };
 
   const dueLabel = dueDateLabel(task);
+  const isChecked = isTaskChecked(task);
+  const isToggling = completeTask.isPending || uncompleteTask.isPending;
 
   return (
     <>
@@ -89,14 +103,14 @@ export function TaskCard({ task, showComplete = true }: TaskCardProps) {
         {showComplete && (
           <Pressable
             onPress={handleComplete}
-            disabled={completeTask.isPending}
-            style={[styles.completeBtn, { borderColor: task.isOverdue ? colors.destructive : colors.primary, backgroundColor: "transparent" }]}
+            disabled={isToggling}
+            style={[styles.completeBtn, { borderColor: task.isOverdue && !isChecked ? colors.destructive : colors.primary, backgroundColor: isChecked ? colors.primary : "transparent" }]}
             hitSlop={8}
           >
-            {completeTask.isPending ? (
+            {isToggling ? (
               <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Feather name="check" size={16} color={task.isOverdue ? colors.destructive : colors.primary} />
+              <Feather name="check" size={16} color={isChecked ? colors.primaryForeground : task.isOverdue ? colors.destructive : colors.primary} />
             )}
           </Pressable>
         )}

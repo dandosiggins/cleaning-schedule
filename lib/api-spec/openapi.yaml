@@ -195,6 +195,27 @@ paths:
                 $ref: "#/components/schemas/TaskCompletion"
         "404":
           description: Task not found
+    delete:
+      operationId: uncompleteTask
+      tags: [completions]
+      summary: Mark a task as not completed
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated task
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CleaningTask"
+        "400":
+          description: Task is not completed
+        "404":
+          description: Task not found
 
   /completions:
     get:

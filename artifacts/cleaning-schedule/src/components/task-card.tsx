@@ -4,7 +4,7 @@ import { CleaningTask } from "@workspace/api-client-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { useCompleteTask, useDeleteTask, getListTasksQueryKey, getListTasksDueTodayQueryKey, getGetStatsQueryKey, getListUpcomingTasksQueryKey } from "@workspace/api-client-react";
+import { useCompleteTask, useDeleteTask, useUncompleteTask, getListTasksQueryKey, getListTasksDueTodayQueryKey, getGetStatsQueryKey, getListUpcomingTasksQueryKey, getListCompletionsQueryKey } from "@workspace/api-client-react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { TaskFormDialog } from "./task-form-dialog";
@@ -17,6 +17,12 @@ function formatFrequency(task: CleaningTask): string {
   return task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1);
 }
 
+function isTaskChecked(task: CleaningTask): boolean {
+  if (!task.lastCompletedAt) return false;
+  if (!task.nextDueAt) return true;
+  return new Date(task.nextDueAt) > new Date();
+}
+
 export function TaskCard({
   task,
   showActions = true,
@@ -26,6 +32,7 @@ export function TaskCard({
 }) {
   const queryClient = useQueryClient();
   const completeTask = useCompleteTask();
+  const uncompleteTask = useUncompleteTask();
   const deleteTask = useDeleteTask();
   const [isEditing, setIsEditing] = useState(false);
 
@@ -34,11 +41,18 @@ export function TaskCard({
     queryClient.invalidateQueries({ queryKey: getListTasksQueryKey() });
     queryClient.invalidateQueries({ queryKey: getGetStatsQueryKey() });
     queryClient.invalidateQueries({ queryKey: getListUpcomingTasksQueryKey() });
+    queryClient.invalidateQueries({ queryKey: getListCompletionsQueryKey() });
   };
 
-  const handleComplete = () => {
+  const handleToggleComplete = () => {
     completeTask.reset();
-    completeTask.mutate({ id: task.id, data: {} }, { onSuccess: invalidate });
+    uncompleteTask.reset();
+
+    if (isTaskChecked(task)) {
+      uncompleteTask.mutate({ id: task.id }, { onSuccess: invalidate });
+    } else {
+      completeTask.mutate({ id: task.id, data: {} }, { onSuccess: invalidate });
+    }
   };
 
   const handleDelete = () => {
@@ -47,12 +61,16 @@ export function TaskCard({
     }
   };
 
-  const isCompleting = completeTask.isPending;
-  const isCompleted = Boolean(task.lastCompletedAt);
+  const isCompleting = completeTask.isPending || uncompleteTask.isPending;
+  const isCompleted = isTaskChecked(task);
   const completionError =
     completeTask.error instanceof Error
       ? completeTask.error.message
+      : uncompleteTask.error instanceof Error
+        ? uncompleteTask.error.message
       : completeTask.error
+        ? "Could not complete task."
+        : uncompleteTask.error
         ? "Could not complete task."
         : null;
 
@@ -60,9 +78,9 @@ export function TaskCard({
     <>
       <div className={`p-4 rounded-xl border bg-card text-card-foreground transition-all flex items-start gap-4 hover-elevate ${task.isOverdue ? 'border-destructive/30 bg-destructive/5 shadow-sm' : 'border-border shadow-sm'}`}>
         <button
-          onClick={handleComplete}
+          onClick={handleToggleComplete}
           disabled={isCompleting}
-          aria-label={isCompleted ? "Mark task complete again" : "Mark task complete"}
+          aria-label={isCompleted ? "Mark task incomplete" : "Mark task complete"}
           className={`flex-shrink-0 w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 ${
             isCompleted
               ? 'bg-primary border-primary text-primary-foreground'
@@ -124,7 +142,7 @@ export function TaskCard({
                 <span>{task.assignedMemberName}</span>
               </div>
             )}
-            {task.lastCompletedAt && (
+            {isCompleted && task.lastCompletedAt && (
               <div className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">
                 <Check className="w-3.5 h-3.5" />
                 <span>Completed {format(new Date(task.lastCompletedAt), 'MMM d')}</span>

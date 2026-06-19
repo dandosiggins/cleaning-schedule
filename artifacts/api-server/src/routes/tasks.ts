@@ -293,6 +293,58 @@ router.post("/tasks/:id/complete", async (req, res) => {
   }
 });
 
+// DELETE /tasks/:id/complete
+router.delete("/tasks/:id/complete", async (req, res) => {
+  try {
+    const paramsParsed = CompleteTaskParams.safeParse({ id: Number(req.params.id) });
+    if (!paramsParsed.success) return res.status(400).json({ error: "Invalid id" });
+
+    const [task] = await db.select().from(cleaningTasksTable).where(eq(cleaningTasksTable.id, paramsParsed.data.id));
+    if (!task) return res.status(404).json({ error: "Task not found" });
+
+    const [latestCompletion] = await db
+      .select()
+      .from(taskCompletionsTable)
+      .where(eq(taskCompletionsTable.taskId, task.id))
+      .orderBy(desc(taskCompletionsTable.completedAt))
+      .limit(1);
+
+    if (!latestCompletion) {
+      return res.status(400).json({ error: "Task is not completed." });
+    }
+
+    await db.delete(taskCompletionsTable).where(eq(taskCompletionsTable.id, latestCompletion.id));
+
+    const [previousCompletion] = await db
+      .select()
+      .from(taskCompletionsTable)
+      .where(eq(taskCompletionsTable.taskId, task.id))
+      .orderBy(desc(taskCompletionsTable.completedAt))
+      .limit(1);
+
+    const [updatedTask] = await db
+      .update(cleaningTasksTable)
+      .set({
+        lastCompletedAt: previousCompletion?.completedAt ?? null,
+        nextDueAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(cleaningTasksTable.id, task.id))
+      .returning();
+
+    let memberName: string | null = null;
+    if (updatedTask.assignedMemberId) {
+      const [m] = await db.select().from(membersTable).where(eq(membersTable.id, updatedTask.assignedMemberId));
+      memberName = m?.name ?? null;
+    }
+
+    return res.json(toApiTask(updatedTask, memberName));
+  } catch (err) {
+    req.log?.error({ err, taskId: req.params.id }, "Failed to uncomplete task");
+    return res.status(500).json({ error: "Failed to uncomplete task." });
+  }
+});
+
 // GET /completions
 router.get("/completions", async (req, res) => {
   const parsed = ListCompletionsQueryParams.safeParse({

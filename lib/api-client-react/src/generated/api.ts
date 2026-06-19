@@ -799,6 +799,76 @@ export const useCompleteTask = <TError = ErrorType<void>,
       return useMutation(getCompleteTaskMutationOptions(options));
     }
 
+export const getUncompleteTaskUrl = (id: number,) => {
+
+
+
+
+  return `/api/tasks/${id}/complete`
+}
+
+/**
+ * @summary Mark a task as not completed
+ */
+export const uncompleteTask = async (id: number,
+     options?: RequestInit): Promise<CleaningTask> => {
+
+  return customFetch<CleaningTask>(getUncompleteTaskUrl(id),
+  {
+    ...options,
+    method: 'DELETE'
+
+
+  }
+);}
+
+
+
+
+export const getUncompleteTaskMutationOptions = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uncompleteTask>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uncompleteTask>>, TError,{id: number}, TContext> => {
+
+const mutationKey = ['uncompleteTask'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uncompleteTask>>, {id: number}> = (props) => {
+          const {id} = props ?? {};
+
+          return  uncompleteTask(id,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UncompleteTaskMutationResult = NonNullable<Awaited<ReturnType<typeof uncompleteTask>>>
+    export type UncompleteTaskMutationError = ErrorType<void>
+
+    /**
+ * @summary Mark a task as not completed
+ */
+export const useUncompleteTask = <TError = ErrorType<void>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uncompleteTask>>, TError,{id: number}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uncompleteTask>>,
+        TError,
+        {id: number},
+        TContext
+      > => {
+      return useMutation(getUncompleteTaskMutationOptions(options));
+    }
+
 export const getListCompletionsUrl = (params?: ListCompletionsParams,) => {
   const normalizedParams = new URLSearchParams();
 
@@ -1622,4 +1692,3 @@ export const useDeleteMember = <TError = ErrorType<unknown>,
       > => {
       return useMutation(getDeleteMemberMutationOptions(options));
     }
-
