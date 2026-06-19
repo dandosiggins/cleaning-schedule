@@ -47,7 +47,8 @@ export const CreateTaskBody = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "assignedMemberId": zod.number().nullish()
+  "assignedMemberId": zod.number().nullish(),
+  "nextDueAt": zod.coerce.date().nullish()
 })
 
 
@@ -88,7 +89,8 @@ export const UpdateTaskBody = zod.object({
   "frequency": zod.enum(['daily', 'weekly', 'monthly', 'custom']).optional(),
   "customIntervalDays": zod.number().nullish(),
   "notes": zod.string().nullish(),
-  "assignedMemberId": zod.number().nullish()
+  "assignedMemberId": zod.number().nullish(),
+  "nextDueAt": zod.coerce.date().nullish()
 })
 
 export const UpdateTaskResponse = zod.object({
@@ -326,5 +328,4 @@ export const CreateMemberBody = zod.object({
 export const DeleteMemberParams = zod.object({
   "id": zod.coerce.number()
 })
-
 

@@ -23,6 +23,7 @@ const taskSchema = z.object({
   customIntervalDays: z.coerce.number().min(1).nullable().optional(),
   notes: z.string().nullable().optional(),
   assignedMemberId: z.number().nullable().optional(),
+  nextDueAt: z.string().nullable().optional(),
 });
 
 type TaskFormValues = z.infer<typeof taskSchema>;
@@ -67,6 +68,26 @@ function normalizeFrequency(frequency: string): TaskFrequency {
   return "weekly";
 }
 
+function toDateInputValue(value: string | null | undefined): string {
+  if (!value) return "";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  return date.toISOString().slice(0, 10);
+}
+
+function todayInputValue(): string {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, "0");
+  const day = String(now.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function dateInputToIso(value: string | null | undefined): string | null {
+  if (!value) return null;
+  return new Date(`${value}T12:00:00`).toISOString();
+}
+
 function toTaskPayload(values: TaskFormValues): CreateTaskInput {
   const frequency = normalizeFrequency(values.frequency);
 
@@ -77,6 +98,7 @@ function toTaskPayload(values: TaskFormValues): CreateTaskInput {
     customIntervalDays: frequency === "custom" ? values.customIntervalDays ?? null : null,
     notes: values.notes?.trim() ? values.notes.trim() : null,
     assignedMemberId: values.assignedMemberId ?? null,
+    nextDueAt: dateInputToIso(values.nextDueAt),
   };
 }
 
@@ -116,6 +138,7 @@ export function TaskFormDialog({
       customIntervalDays: activeTask?.customIntervalDays || null,
       notes: activeTask?.notes || "",
       assignedMemberId: activeTask?.assignedMemberId ?? null,
+      nextDueAt: toDateInputValue(activeTask?.nextDueAt) || todayInputValue(),
     }
   });
 
@@ -130,6 +153,7 @@ export function TaskFormDialog({
         customIntervalDays: activeTask.customIntervalDays,
         notes: activeTask.notes,
         assignedMemberId: activeTask.assignedMemberId ?? null,
+        nextDueAt: toDateInputValue(activeTask.nextDueAt) || todayInputValue(),
       });
       if (activeTask.room && !existingRooms.includes(activeTask.room)) {
         setIsNewRoom(true);
@@ -142,6 +166,7 @@ export function TaskFormDialog({
         customIntervalDays: null,
         notes: "",
         assignedMemberId: null,
+        nextDueAt: todayInputValue(),
       });
       setIsNewRoom(false);
     }
@@ -299,6 +324,20 @@ export function TaskFormDialog({
                 />
               )}
             </div>
+
+            <FormField
+              control={form.control}
+              name="nextDueAt"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="font-semibold text-foreground">Next Due</FormLabel>
+                  <FormControl>
+                    <Input type="date" className="rounded-lg bg-muted/50" {...field} value={field.value || ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             {/* Assignee picker */}
             {memberList.length > 0 && (

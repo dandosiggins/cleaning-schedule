@@ -52,6 +52,7 @@ export interface CreateTaskInput {
   customIntervalDays?: number | null;
   notes?: string | null;
   assignedMemberId?: number | null;
+  nextDueAt?: string | null;
 }
 
 export type UpdateTaskInputFrequency = typeof UpdateTaskInputFrequency[keyof typeof UpdateTaskInputFrequency];
@@ -71,6 +72,7 @@ export interface UpdateTaskInput {
   customIntervalDays?: number | null;
   notes?: string | null;
   assignedMemberId?: number | null;
+  nextDueAt?: string | null;
 }
 
 export interface TaskCompletion {
@@ -165,4 +167,3 @@ export type ListShoppingParams = {
  */
 weekStart: string;
 };
-

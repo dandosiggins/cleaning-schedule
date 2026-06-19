@@ -79,7 +79,7 @@ router.post("/tasks", async (req, res) => {
     return res.status(400).json({ error: "Invalid input", details: parsed.error });
   }
 
-  const { frequency, customIntervalDays, notes, assignedMemberId } = parsed.data as typeof parsed.data & { assignedMemberId?: number | null };
+  const { frequency, customIntervalDays, notes, assignedMemberId, nextDueAt: requestedNextDueAt } = parsed.data as typeof parsed.data & { assignedMemberId?: number | null; nextDueAt?: Date | null };
   const name = parsed.data.name.trim();
   const room = parsed.data.room.trim();
 
@@ -97,7 +97,7 @@ router.post("/tasks", async (req, res) => {
 
   try {
     const now = new Date();
-    const nextDueAt = computeNextDueAt(frequency, customIntervalDays, now);
+    const nextDueAt = requestedNextDueAt ?? computeNextDueAt(frequency, customIntervalDays, now);
     const [task] = await db.insert(cleaningTasksTable).values({
       name,
       room,
@@ -208,13 +208,15 @@ router.put("/tasks/:id", async (req, res) => {
   const existing = await db.select().from(cleaningTasksTable).where(eq(cleaningTasksTable.id, paramsParsed.data.id));
   if (!existing[0]) return res.status(404).json({ error: "Task not found" });
 
-  const body = bodyParsed.data as typeof bodyParsed.data & { assignedMemberId?: number | null };
+  const body = bodyParsed.data as typeof bodyParsed.data & { assignedMemberId?: number | null; nextDueAt?: Date | null };
 
   const updates: Partial<typeof cleaningTasksTable.$inferInsert> = {
     ...body,
     updatedAt: new Date(),
   };
-  if (body.frequency) {
+  if ("nextDueAt" in body) {
+    updates.nextDueAt = body.nextDueAt ?? null;
+  } else if (body.frequency) {
     const freq = body.frequency;
     const interval = body.customIntervalDays ?? existing[0].customIntervalDays;
     const base = existing[0].lastCompletedAt ?? new Date();

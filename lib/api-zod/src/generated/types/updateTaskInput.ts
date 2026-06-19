@@ -14,4 +14,5 @@ export interface UpdateTaskInput {
   customIntervalDays?: number | null;
   notes?: string | null;
   assignedMemberId?: number | null;
+  nextDueAt?: Date | null;
 }

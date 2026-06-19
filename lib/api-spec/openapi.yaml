@@ -474,6 +474,10 @@ components:
         assignedMemberId:
           type: integer
           nullable: true
+        nextDueAt:
+          type: string
+          format: date-time
+          nullable: true
       required:
         - name
         - room
@@ -497,6 +501,10 @@ components:
           nullable: true
         assignedMemberId:
           type: integer
+          nullable: true
+        nextDueAt:
+          type: string
+          format: date-time
           nullable: true
 
     TaskCompletion:
