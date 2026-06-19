@@ -14,6 +14,12 @@ import {
 
 const router = Router();
 
+function endOfDay(date: Date): Date {
+  const result = new Date(date);
+  result.setHours(23, 59, 59, 999);
+  return result;
+}
+
 function computeNextDueAt(frequency: string, customIntervalDays: number | null | undefined, fromDate: Date = new Date()): Date | null {
   const next = new Date(fromDate);
   if (frequency === "once") {
@@ -29,7 +35,7 @@ function computeNextDueAt(frequency: string, customIntervalDays: number | null |
   } else {
     next.setDate(next.getDate() + 7);
   }
-  return next;
+  return endOfDay(next);
 }
 
 type TaskRow = typeof cleaningTasksTable.$inferSelect;
@@ -326,7 +332,7 @@ router.delete("/tasks/:id/complete", async (req, res) => {
       .update(cleaningTasksTable)
       .set({
         lastCompletedAt: previousCompletion?.completedAt ?? null,
-        nextDueAt: new Date(),
+        nextDueAt: endOfDay(new Date()),
         updatedAt: new Date(),
       })
       .where(eq(cleaningTasksTable.id, task.id))
