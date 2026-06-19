@@ -14,9 +14,12 @@
       "backgroundColor": "#F9F8F6"
     },
     "ios": {
+      "bundleIdentifier": "com.dandosiggins.tidyhome",
       "supportsTablet": false
     },
-    "android": {},
+    "android": {
+      "package": "com.dandosiggins.tidyhome"
+    },
     "web": {
       "favicon": "./assets/images/icon.png"
     },

@@ -16,7 +16,17 @@ import { setBaseUrl } from "@workspace/api-client-react";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 
-setBaseUrl(`https://${process.env.EXPO_PUBLIC_DOMAIN}`);
+const apiUrl =
+  process.env.EXPO_PUBLIC_API_URL ??
+  (process.env.EXPO_PUBLIC_DOMAIN
+    ? `https://${process.env.EXPO_PUBLIC_DOMAIN}`
+    : null);
+
+if (apiUrl) {
+  setBaseUrl(apiUrl);
+} else {
+  console.warn("EXPO_PUBLIC_API_URL is not set. API requests will use relative URLs.");
+}
 
 SplashScreen.preventAutoHideAsync();
 

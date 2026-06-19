@@ -29,6 +29,8 @@ node_modules
 
 # misc
 /.env
+.env
+!.env.example
 /.codex-vite*.log
 /.sass-cache
 /connect.lock
