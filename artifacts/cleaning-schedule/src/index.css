@@ -448,6 +448,22 @@
     text-transform: uppercase;
   }
 
+  .print-other-tasks {
+    border-top: 1px solid #9ca3af;
+    margin-top: 14px;
+    padding-top: 10px;
+  }
+
+  .print-other-tasks h2 {
+    font-size: 13px;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+  }
+
+  .print-other-task-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .print-week-grid {
     display: grid;
     gap: 10px;

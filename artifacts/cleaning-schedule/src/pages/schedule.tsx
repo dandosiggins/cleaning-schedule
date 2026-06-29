@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, LayoutGrid, Clock, Printer } from "lucide-react";
 import { useMemo, useState } from "react";
 import { TaskFormDialog } from "@/components/task-form-dialog";
-import { addDays, differenceInCalendarDays, endOfDay, format, startOfDay } from "date-fns";
+import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
 
 function toTaskArray(data: unknown): CleaningTask[] {
   if (Array.isArray(data)) return data;
@@ -28,11 +28,28 @@ function formatFrequency(task: CleaningTask): string {
 function WeeklyPrintSchedule({ tasks }: { tasks: CleaningTask[] }) {
   const today = startOfDay(new Date());
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(today, index));
-  const tasksWithDueDates = tasks
+  const sortedTasks = [...tasks].sort((a, b) => {
+    const aDue = a.nextDueAt ? new Date(a.nextDueAt).getTime() : Number.MAX_SAFE_INTEGER;
+    const bDue = b.nextDueAt ? new Date(b.nextDueAt).getTime() : Number.MAX_SAFE_INTEGER;
+    if (aDue !== bDue) return aDue - bDue;
+    return a.name.localeCompare(b.name);
+  });
+  const tasksWithDueDates = sortedTasks
     .filter((task) => task.nextDueAt)
     .sort((a, b) => new Date(a.nextDueAt ?? 0).getTime() - new Date(b.nextDueAt ?? 0).getTime());
 
   const overdueTasks = tasksWithDueDates.filter((task) => new Date(task.nextDueAt ?? 0) < today);
+  const weeklyTaskIds = new Set<number>();
+  overdueTasks.forEach((task) => weeklyTaskIds.add(task.id));
+  weekDays.forEach((day) => {
+    tasksWithDueDates.forEach((task) => {
+      const dueDate = new Date(task.nextDueAt ?? "");
+      if (differenceInCalendarDays(dueDate, day) === 0) {
+        weeklyTaskIds.add(task.id);
+      }
+    });
+  });
+  const otherTasks = sortedTasks.filter((task) => !weeklyTaskIds.has(task.id));
 
   return (
     <section className="print-weekly-schedule hidden">
@@ -43,7 +60,7 @@ function WeeklyPrintSchedule({ tasks }: { tasks: CleaningTask[] }) {
             {format(today, "MMMM d")} - {format(addDays(today, 6), "MMMM d, yyyy")}
           </p>
         </div>
-        <span>{tasksWithDueDates.length} scheduled tasks</span>
+        <span>{tasks.length} total tasks</span>
       </header>
 
       {overdueTasks.length > 0 && (
@@ -100,6 +117,28 @@ function WeeklyPrintSchedule({ tasks }: { tasks: CleaningTask[] }) {
           );
         })}
       </div>
+
+      {otherTasks.length > 0 && (
+        <section className="print-other-tasks">
+          <h2>Other Tasks</h2>
+          <div className="print-task-list print-other-task-list">
+            {otherTasks.map((task) => (
+              <div key={`print-other-${task.id}`} className="print-task-row">
+                <span className="print-checkbox" />
+                <div>
+                  <strong>{task.name}</strong>
+                  <p>
+                    {task.room} - {formatFrequency(task)}
+                    {task.nextDueAt ? ` - Due ${format(new Date(task.nextDueAt), "MMM d")}` : " - No due date"}
+                    {task.assignedMemberName ? ` - ${task.assignedMemberName}` : ""}
+                  </p>
+                  {task.notes && <p className="print-notes">{task.notes}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </section>
   );
 }
@@ -123,17 +162,6 @@ export default function SchedulePage() {
     }, {} as Record<string, CleaningTask[]>);
   }, [safeTasks]);
 
-  const printableTasks = useMemo(() => {
-    const today = startOfDay(new Date());
-    const lastDay = endOfDay(addDays(today, 6));
-
-    return safeTasks.filter((task) => {
-      if (!task.nextDueAt) return false;
-      const dueDate = new Date(task.nextDueAt);
-      return dueDate < today || (dueDate >= today && dueDate <= lastDay);
-    });
-  }, [safeTasks]);
-
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
@@ -142,7 +170,7 @@ export default function SchedulePage() {
           <p className="text-muted-foreground mt-2 text-xl font-medium">Manage all your household routines.</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3">
-          <Button variant="outline" onClick={() => window.print()} className="gap-2 rounded-xl h-12 px-6 font-semibold">
+          <Button variant="outline" onClick={() => window.print()} disabled={isLoading} className="gap-2 rounded-xl h-12 px-6 font-semibold">
             <Printer className="w-5 h-5" strokeWidth={2.5} />
             <span>Print Week</span>
           </Button>
@@ -153,7 +181,7 @@ export default function SchedulePage() {
         </div>
       </header>
 
-      <WeeklyPrintSchedule tasks={printableTasks} />
+      <WeeklyPrintSchedule tasks={safeTasks} />
 
       {/* Upcoming Section */}
       <div className="space-y-5 print:hidden">
