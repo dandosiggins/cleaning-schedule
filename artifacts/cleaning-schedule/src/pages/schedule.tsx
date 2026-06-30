@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, LayoutGrid, Clock, Printer } from "lucide-react";
 import { useMemo, useState } from "react";
 import { TaskFormDialog } from "@/components/task-form-dialog";
-import { addDays, differenceInCalendarDays, format, startOfDay } from "date-fns";
+import { addDays, addMonths, differenceInCalendarDays, format, startOfDay } from "date-fns";
 
 function toTaskArray(data: unknown): CleaningTask[] {
   if (Array.isArray(data)) return data;
@@ -25,10 +25,60 @@ function formatFrequency(task: CleaningTask): string {
   return task.frequency.charAt(0).toUpperCase() + task.frequency.slice(1);
 }
 
+function isCompletedOneTimeTask(task: CleaningTask): boolean {
+  return task.frequency === "once" && Boolean(task.lastCompletedAt) && !task.nextDueAt;
+}
+
+function advanceTaskDate(date: Date, task: CleaningTask): Date | null {
+  if (task.frequency === "once") return null;
+  if (task.frequency === "daily") return addDays(date, 1);
+  if (task.frequency === "weekly") return addDays(date, 7);
+  if (task.frequency === "monthly") return addMonths(date, 1);
+  if (task.frequency === "custom" && task.customIntervalDays) {
+    return addDays(date, task.customIntervalDays);
+  }
+  return addDays(date, 7);
+}
+
+type PrintTaskOccurrence = {
+  task: CleaningTask;
+  dueDate: Date;
+};
+
+function getWeeklyOccurrences(task: CleaningTask, today: Date, weekEnd: Date): PrintTaskOccurrence[] {
+  if (!task.nextDueAt || isCompletedOneTimeTask(task)) return [];
+
+  let dueDate = startOfDay(new Date(task.nextDueAt));
+  if (Number.isNaN(dueDate.getTime())) return [];
+
+  if (task.frequency === "once") {
+    if (dueDate < today || dueDate > weekEnd) return [];
+    return [{ task, dueDate }];
+  }
+
+  while (dueDate < today) {
+    const nextDate = advanceTaskDate(dueDate, task);
+    if (!nextDate || nextDate <= dueDate) return [];
+    dueDate = nextDate;
+  }
+
+  const occurrences: PrintTaskOccurrence[] = [];
+  while (dueDate <= weekEnd) {
+    occurrences.push({ task, dueDate });
+    const nextDate = advanceTaskDate(dueDate, task);
+    if (!nextDate || nextDate <= dueDate) break;
+    dueDate = nextDate;
+  }
+
+  return occurrences;
+}
+
 function WeeklyPrintSchedule({ tasks }: { tasks: CleaningTask[] }) {
   const today = startOfDay(new Date());
+  const weekEnd = startOfDay(addDays(today, 6));
   const weekDays = Array.from({ length: 7 }, (_, index) => addDays(today, index));
-  const sortedTasks = [...tasks].sort((a, b) => {
+  const activeTasks = tasks.filter((task) => !isCompletedOneTimeTask(task));
+  const sortedTasks = [...activeTasks].sort((a, b) => {
     const aDue = a.nextDueAt ? new Date(a.nextDueAt).getTime() : Number.MAX_SAFE_INTEGER;
     const bDue = b.nextDueAt ? new Date(b.nextDueAt).getTime() : Number.MAX_SAFE_INTEGER;
     if (aDue !== bDue) return aDue - bDue;
@@ -39,16 +89,9 @@ function WeeklyPrintSchedule({ tasks }: { tasks: CleaningTask[] }) {
     .sort((a, b) => new Date(a.nextDueAt ?? 0).getTime() - new Date(b.nextDueAt ?? 0).getTime());
 
   const overdueTasks = tasksWithDueDates.filter((task) => new Date(task.nextDueAt ?? 0) < today);
-  const weeklyTaskIds = new Set<number>();
+  const weeklyOccurrences = sortedTasks.flatMap((task) => getWeeklyOccurrences(task, today, weekEnd));
+  const weeklyTaskIds = new Set(weeklyOccurrences.map((occurrence) => occurrence.task.id));
   overdueTasks.forEach((task) => weeklyTaskIds.add(task.id));
-  weekDays.forEach((day) => {
-    tasksWithDueDates.forEach((task) => {
-      const dueDate = new Date(task.nextDueAt ?? "");
-      if (differenceInCalendarDays(dueDate, day) === 0) {
-        weeklyTaskIds.add(task.id);
-      }
-    });
-  });
   const otherTasks = sortedTasks.filter((task) => !weeklyTaskIds.has(task.id));
 
   return (
@@ -60,7 +103,7 @@ function WeeklyPrintSchedule({ tasks }: { tasks: CleaningTask[] }) {
             {format(today, "MMMM d")} - {format(addDays(today, 6), "MMMM d, yyyy")}
           </p>
         </div>
-        <span>{tasks.length} total tasks</span>
+        <span>{activeTasks.length} open tasks</span>
       </header>
 
       {overdueTasks.length > 0 && (
@@ -85,21 +128,20 @@ function WeeklyPrintSchedule({ tasks }: { tasks: CleaningTask[] }) {
 
       <div className="print-week-grid">
         {weekDays.map((day) => {
-          const dayTasks = tasksWithDueDates.filter((task) => {
-            const dueDate = new Date(task.nextDueAt ?? "");
-            return differenceInCalendarDays(dueDate, day) === 0;
-          });
+          const dayOccurrences = weeklyOccurrences.filter((occurrence) => (
+            differenceInCalendarDays(occurrence.dueDate, day) === 0
+          ));
 
           return (
             <section key={day.toISOString()} className="print-day">
               <h2>{format(day, "EEEE")}</h2>
               <p>{format(day, "MMM d")}</p>
-              {dayTasks.length === 0 ? (
+              {dayOccurrences.length === 0 ? (
                 <div className="print-empty">No scheduled tasks</div>
               ) : (
                 <div className="print-task-list">
-                  {dayTasks.map((task) => (
-                    <div key={`print-${task.id}`} className="print-task-row">
+                  {dayOccurrences.map(({ task, dueDate }) => (
+                    <div key={`print-${task.id}-${dueDate.toISOString()}`} className="print-task-row">
                       <span className="print-checkbox" />
                       <div>
                         <strong>{task.name}</strong>
